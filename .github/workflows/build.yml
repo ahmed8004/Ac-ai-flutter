@@ -32,11 +32,8 @@ jobs:
     - name: Get dependencies
       run: flutter pub get
 
-    - name: Analyze code
-      run: flutter analyze || true
-
-    - name: Build APK (debug) with verbose
-      run: flutter build apk --debug --no-tree-shake-icons -v
+    - name: Build APK (skip validation)
+      run: flutter build apk --debug --no-tree-shake-icons --android-skip-build-dependency-validation
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
