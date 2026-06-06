@@ -6,7 +6,7 @@ import 'dart:io';
 class FileManagerService {
   Future<String?> pickFile() async {
     try {
-      final result = await FilePicker.platform.pickFiles();
+      final result = await FilePicker.instance.pickFiles();
       if (result != null && result.files.isNotEmpty) {
         return result.files.first.path;
       }
@@ -19,7 +19,7 @@ class FileManagerService {
 
   Future<String?> pickPDF() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.instance.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf'],
       );
@@ -35,7 +35,7 @@ class FileManagerService {
 
   Future<String?> pickDocument() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.instance.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'rtf'],
       );
@@ -51,7 +51,7 @@ class FileManagerService {
 
   Future<String?> pickImage() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.instance.pickFiles(
         type: FileType.image,
       );
       if (result != null && result.files.isNotEmpty) {
@@ -92,7 +92,7 @@ class FileManagerService {
 
   Future<String?> saveFile(String fileName, String content) async {
     try {
-      final result = await FilePicker.platform.saveFile(
+      final result = await FilePicker.instance.saveFile(
         dialogTitle: 'Save file',
         fileName: fileName,
       );
