@@ -1,0 +1,213 @@
+You are an expert Flutter developer tasked with building a complete APK for the AC AI Voice Assistant app.
+
+# IMPORTANT RULES:
+1. DO NOT remove or delete ANY features - all 20+ features must remain intact
+2. Fix ALL errors one by one without compromising functionality
+3. Use ONLY stable, compatible package versions from pub.dev
+4. Build must succeed using GitHub Actions
+
+# PROJECT CONTEXT:
+- Repository: https://github.com/ahmed8004/Ac-ai-flutter
+- App Name: AC AI (Voice Assistant)
+- Owner: Ahmed Chaudhari (Ethical Hacker, Cyber Security Expert, Network Administrator)
+- Location: Sangamner, Maharashtra
+- Wake Words: "AC", "Hey AC", "AC AI", "AC bhai", "AC suno"
+- Languages: Hindi, Hinglish, English
+
+# FEATURES THAT MUST STAY INTACT (DO NOT REMOVE):
+✅ Voice Recognition (speech_to_text)
+✅ Text-to-Speech (flutter_tts)
+✅ AI Responses (Groq API - Llama 3.3 70B)
+✅ Owner Memory Profile (Ahmed Chaudhari details)
+✅ Wake Word Detection ("AC" responds)
+✅ Call Automation (make calls)
+✅ SMS Automation (send SMS)
+✅ YouTube Control (search, play, pause)
+✅ Torch/Flashlight Control (on/off)
+✅ Brightness Control (0-100%)
+✅ Volume Control (mute, up, down, set)
+✅ Camera (take photo, selfie)
+✅ WiFi Control (on/off)
+✅ Bluetooth Control (on/off)
+✅ Screenshot Capture
+✅ File Manager (open, create, delete files)
+✅ PDF Generation (create PDFs)
+✅ Web Scraping (search, extract data)
+✅ Download Manager (download files)
+✅ App Launcher (20+ apps)
+✅ Location Services (where am I)
+✅ Reactive Orb Animation (voice intensity)
+✅ Dark Matrix Theme (sci-fi UI)
+
+# TECHNICAL STACK:
+- Flutter SDK: Use latest stable (automatically detect)
+- Dart SDK: Auto-compatible with Flutter
+- Platform: Android Only (Samsung Galaxy A14, Android 15)
+- Build: GitHub Actions (automatic APK generation)
+- Architecture: MVVM with Provider
+
+# CRITICAL ERRORS TO FIX:
+
+## Error 1: Package Version Conflicts
+SOLUTION: Use dependency resolver to find compatible versions:
+```yaml
+flutter pub get
+flutter pub upgrade --major-versions
+```
+
+## Error 2: Dart SDK Mismatch
+Use this approach:
+1. Check required Dart SDK version for each package
+2. Find Flutter version that includes compatible Dart
+3. Update workflow with correct Flutter version
+4. OR downgrade package to match available Dart
+
+## Error 3: Gradle Build Failures
+SOLUTION: 
+- Ensure `local.properties` has flutter.sdk set
+- Use correct Gradle version for Flutter
+- Update `android/settings.gradle` and `android/build.gradle`
+- Check Java version (Java 17 recommended)
+
+## Error 4: API/Method Not Found
+SOLUTION:
+- Check package documentation for breaking changes
+- Update method calls to match current API
+- Use `flutter pub outdated` to find updates
+
+## Error 5: Type Casting Errors
+SOLUTION:
+- Add proper null checks
+- Use correct parentheses in comparisons
+- Cast types explicitly when needed
+
+# WORKFLOW TO BUILD APK:
+
+Step 1: Analyze current errors in GitHub Actions
+```bash
+gh run view --log-failed
+```
+
+Step 2: Check package compatibility
+```yaml
+dependencies:
+  # Use versions that work together
+  speech_to_text: ^[check latest]
+  flutter_tts: ^[check latest]
+  # Check each package on pub.dev
+```
+
+Step 3: Fix dependencies
+```yaml
+# If package A needs Dart 3.5 and Flutter has Dart 3.4:
+# Option 1: Upgrade Flutter
+# Option 2: Downgrade package A
+# Option 3: Find alternative package
+```
+
+Step 4: Update Android Configuration
+```gradle
+// android/app/build.gradle
+android {
+    compileSdk 34
+    defaultConfig {
+        minSdk 21
+        targetSdk 34
+    }
+}
+```
+
+Step 5: Build and test
+```bash
+flutter clean
+flutter pub get
+flutter build apk --debug
+```
+
+# PACKAGE COMPATIBILITY MATRIX:
+When fixing versions, use this priority:
+1. Core packages (speech, tts, http) - MUST work
+2. Device control (camera, torch, volume) - KEEP all
+3. File management (pdf, file_picker) - KEEP all
+4. UI packages (animation, theme) - KEEP all
+
+# GROQ API CONFIGURATION:
+API Key should be passed via environment variable:
+```dart
+static const String _groqApiKey = String.fromEnvironment('GROQ_API_KEY', defaultValue: 'YOUR_API_KEY_HERE');
+```
+
+OR user can set in Settings screen after APK install:
+```
+[YOUR_GROQ_API_KEY_HERE]
+```
+
+# OWNER PROFILE MEMORY:
+This MUST remain in AI Brain Service:
+```dart
+Owner: Ahmed Chaudhari
+Profession: Ethical Hacker, Cyber Security Expert, Network Administrator
+Location: Sangamner, Maharashtra
+Wake words: AC, Hey AC, AC bhai
+```
+
+When user asks:
+- "Owner kaun hai?" → "Mera owner Ahmed Chaudhari hain..."
+- "Owner ka address?" → "Sangamner, Maharashtra"
+- "Owner ki profession?" → "Ethical Hacker, Cyber Security Expert"
+
+# BUILD INSTRUCTIONS FOR COPILOT:
+
+1. Read all files in the repository
+2. Identify ALL compilation errors
+3. Fix errors ONE BY ONE (not all at once)
+4. After each fix, update pubspec.yaml or workflow
+5. Commit changes with clear messages
+6. Push to GitHub
+7. Monitor build in Actions
+8. If new error appears, repeat from step 2
+9. Continue until APK builds successfully
+
+# SUCCESS CRITERIA:
+✅ `flutter pub get` succeeds
+✅ `flutter analyze` passes (warnings okay)
+✅ `flutter build apk --debug` succeeds
+✅ APK appears in Artifacts
+✅ APK installs on Samsung Galaxy A14
+✅ All 20+ features work
+✅ Owner memory works
+✅ Wake words respond
+
+# DO NOT:
+❌ Remove any features
+❌ Delete any service files
+❌ Skip packages because of errors (FIX instead)
+❌ Change app name or core functionality
+❌ Remove owner profile
+❌ Simplify code by removing features
+
+# FINAL COMMAND SEQUENCE:
+```bash
+# Step 1: Clone repo
+git clone https://github.com/ahmed8004/Ac-ai-flutter.git
+cd Ac-ai-flutter
+
+# Step 2: Check current state
+flutter doctor -v
+flutter pub get
+
+# Step 3: Fix errors iteratively
+# Fix one error → Commit → Push → Check Actions → Repeat
+
+# Step 4: Build APK locally (optional)
+flutter clean
+flutter pub get
+flutter build apk --debug
+
+# Step 5: Upload to GitHub
+git add .
+git commit -m "Fix all compilation errors"
+git push origin master
+```
+
+Now start fixing errors one by one and build the complete APK without removing ANY features!
