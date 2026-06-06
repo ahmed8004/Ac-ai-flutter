@@ -9,7 +9,7 @@ class BrightnessService {
 
   Future<void> initialize() async {
     try {
-      _currentBrightness = await _brightness.current;
+      _currentBrightness = await _brightness.application;
       debugPrint('Brightness initialized: $_currentBrightness');
     } catch (e) {
       debugPrint('Brightness init error: $e');
@@ -19,7 +19,7 @@ class BrightnessService {
   Future<void> setBrightness(double value) async {
     try {
       final brightness = value.clamp(0.0, 1.0);
-      await _brightness.setScreenBrightness(brightness);
+      await _brightness.setApplicationScreenBrightness(brightness);
       _currentBrightness = brightness;
       debugPrint('Brightness set to: $brightness');
     } catch (e) {
@@ -41,7 +41,7 @@ class BrightnessService {
 
   Future<void> auto() async {
     try {
-      await _brightness.resetScreenBrightness();
+      await _brightness.resetApplicationScreenBrightness();
       debugPrint('Auto brightness enabled');
     } catch (e) {
       debugPrint('Auto brightness error: $e');

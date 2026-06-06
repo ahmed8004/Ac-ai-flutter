@@ -24,7 +24,11 @@ jobs:
         flutter-version: '3.44.1'
         channel: 'stable'
         cache: true
-    
+
+    - name: Configure local.properties
+      run: |
+        echo "flutter.sdk=$FLUTTER_HOME" > android/local.properties
+
     - name: Get dependencies
       run: flutter pub get
     
