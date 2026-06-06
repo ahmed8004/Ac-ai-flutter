@@ -9,7 +9,7 @@ class VolumeService {
   Future<void> init() async {
     if (_initialized) return;
     try {
-      await FlutterVolumeController.updateVolumePanelUI(false);
+      await FlutterVolumeController.setVolume(0.5, showSystemUI: false);
       _initialized = true;
       debugPrint('Volume Service initialized');
     } catch (e) {

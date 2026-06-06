@@ -92,12 +92,12 @@ Permission Status:
       Permission.sms,
     ].request();
 
-    _micGranted = results[Permission.microphone] ?? PermissionStatus.denied == PermissionStatus.granted;
-    _cameraGranted = results[Permission.camera] ?? PermissionStatus.denied == PermissionStatus.granted;
-    _contactsGranted = results[Permission.contacts] ?? PermissionStatus.denied == PermissionStatus.granted;
-    _locationGranted = results[Permission.location] ?? PermissionStatus.denied == PermissionStatus.granted;
-    _phoneGranted = results[Permission.phone] ?? PermissionStatus.denied == PermissionStatus.granted;
-    _smsGranted = results[Permission.sms] ?? PermissionStatus.denied == PermissionStatus.granted;
+    _micGranted = (results[Permission.microphone] ?? PermissionStatus.denied) == PermissionStatus.granted;
+    _cameraGranted = (results[Permission.camera] ?? PermissionStatus.denied) == PermissionStatus.granted;
+    _contactsGranted = (results[Permission.contacts] ?? PermissionStatus.denied) == PermissionStatus.granted;
+    _locationGranted = (results[Permission.location] ?? PermissionStatus.denied) == PermissionStatus.granted;
+    _phoneGranted = (results[Permission.phone] ?? PermissionStatus.denied) == PermissionStatus.granted;
+    _smsGranted = (results[Permission.sms] ?? PermissionStatus.denied) == PermissionStatus.granted;
 
     await checkAllPermissions();
     
