@@ -111,13 +111,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: controller.statusMessage == 'Ready'
-                    ? AppTheme.primaryCyan.withOpacity(0.2)
-                    : AppTheme.orbProcessing.withOpacity(0.2),
+                    ? AppTheme.primaryCyan.withValues(alpha: 0.2)
+                    : AppTheme.orbProcessing.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: controller.statusMessage == 'Ready'
-                      ? AppTheme.primaryCyan.withOpacity(0.5)
-                      : AppTheme.orbProcessing.withOpacity(0.5),
+                      ? AppTheme.primaryCyan.withValues(alpha: 0.5)
+                      : AppTheme.orbProcessing.withValues(alpha: 0.5),
                   width: 1,
                 ),
               ),
@@ -199,10 +199,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           decoration: BoxDecoration(
-            color: orbController.currentColor.withOpacity(0.2),
+            color: orbController.currentColor.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: orbController.currentColor.withOpacity(0.5),
+              color: orbController.currentColor.withValues(alpha: 0.5),
               width: 1,
             ),
           ),
