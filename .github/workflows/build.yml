@@ -27,7 +27,7 @@ jobs:
 
     - name: Configure local.properties
       run: |
-        echo "flutter.sdk=$(which flutter | xargs dirname | xargs dirname)" > android/local.properties
+        echo "flutter.sdk=$FLUTTER_HOME" > android/local.properties
 
     - name: Get dependencies
       run: flutter pub get

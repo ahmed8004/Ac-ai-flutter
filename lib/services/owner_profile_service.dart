@@ -5,17 +5,6 @@ class OwnerProfileService {
   static const String _ownerName = 'Ahmed Chaudhari';
   static const String _ownerProfession = 'Ethical Hacker, Cyber Security Expert, Network Administrator';
   static const String _ownerAddress = 'Sangamner, Maharashtra';
-  static const String _ownerDescription = '''
-Owner: Ahmed Chaudhari
-Profession: Ethical Hacker, Cyber Security Expert, Network Administrator
-Location: Sangamner, Maharashtra
-Skills: 
-  - Cybersecurity
-  - Ethical Hacking
-  - Network Administration
-  - Penetration Testing
-  - Security Analysis
-''';
 
   String get ownerName => _ownerName;
   String get ownerProfession => _ownerProfession;

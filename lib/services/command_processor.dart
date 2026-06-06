@@ -253,7 +253,6 @@ class CommandProcessor {
     final lower = input.toLowerCase();
 
     if (lower.contains('status') || lower.contains('check')) {
-      final connected = await _wifiService.isConnected();
       final connectionType = await _wifiService.getConnectionType();
       return CommandResult(
         success: true,
