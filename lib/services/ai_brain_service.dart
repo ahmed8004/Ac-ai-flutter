@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
+import 'owner_profile_service.dart';
 
 class AIBrainService {
   static const String _groqApiKey = String.fromEnvironment('GROQ_API_KEY', defaultValue: 'YOUR_API_KEY_HERE');
@@ -10,6 +11,7 @@ class AIBrainService {
   bool _isProcessing = false;
   final List<Map<String, String>> _conversationHistory = [];
   final int _maxHistoryLength = 10;
+  final OwnerProfileService _ownerService = OwnerProfileService();
 
   bool get isProcessing => _isProcessing;
 
@@ -21,7 +23,35 @@ class AIBrainService {
     _isProcessing = true;
 
     try {
+      // Check if asking about owner
+      if (_ownerService.isOwnerMentioned(userMessage)) {
+        _isProcessing = false;
+        return _ownerService.getResponse(userMessage);
+      }
+
       _addToHistory('user', userMessage);
+
+      // Add system context about owner
+      final systemContext = '''
+You are AC AI, an intelligent voice assistant created by Ahmed Chaudhari.
+Owner Information:
+- Name: Ahmed Chaudhari
+- Profession: Ethical Hacker, Cyber Security Expert, Network Administrator
+- Location: Sangamner, Maharashtra
+- Skills: Cybersecurity, Ethical Hacking, Network Administration, Penetration Testing
+
+Rules:
+- Always respond in Hindi/Hinglish if user speaks Hindi
+- Be helpful, friendly and informative
+- If asked about owner, give full details about Ahmed Chaudhari
+- Respond to "AC" as your name (not just "AC AI")
+- You can be called by: "AC", "Hey AC", "AC AI", "AC bhai"
+''';
+
+      final messages = [
+        {'role': 'system', 'content': systemContext},
+        ..._conversationHistory,
+      ];
 
       final response = await http.post(
         Uri.parse(_groqApiUrl),
@@ -31,8 +61,8 @@ class AIBrainService {
         },
         body: jsonEncode({
           'model': _model,
-          'messages': _conversationHistory,
-          'max_tokens': 150,
+          'messages': messages,
+          'max_tokens': 200,
           'temperature': 0.7,
         }),
       );
@@ -71,6 +101,7 @@ class AIBrainService {
 
   void dispose() {
     _conversationHistory.clear();
+    _ownerService.dispose();
     debugPrint('AI Brain Service disposed');
   }
 }

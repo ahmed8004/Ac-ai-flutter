@@ -87,6 +87,39 @@ class AppController extends ChangeNotifier {
     }
   }
 
+  bool _isWakeWordDetected(String text) {
+    final lowerText = text.toLowerCase().trim();
+    
+    // Wake words: "AC", "Hey AC", "AC AI", "AC bhai", "AC suno"
+    final wakeWords = [
+      'ac',
+      'hey ac',
+      'ac ai',
+      'ac bhai',
+      'ac suno',
+      'ac help',
+      'hey ac ai',
+      'ac ji',
+      'ac assistant',
+    ];
+    
+    for (final wakeWord in wakeWords) {
+      if (lowerText.startsWith(wakeWord) || lowerText == wakeWord) {
+        return true;
+      }
+    }
+    
+    // Check if "AC" is mentioned in beginning (first 5 words)
+    final words = lowerText.split(' ');
+    if (words.length > 0 && words.length <= 5) {
+      if (words.contains('ac')) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
   Future<String> processVoiceInput() async {
     if (!_isInitialized) {
       return 'App not initialized';
@@ -125,6 +158,23 @@ class AppController extends ChangeNotifier {
 
       _lastUserInput = transcript;
       _setStatus('Processing...');
+      
+      // Check if wake word detected
+      if (!_isWakeWordDetected(transcript)) {
+        // Check if user just said "AC" to activate
+        final lowerTranscript = transcript.toLowerCase().trim();
+        if (lowerTranscript == 'ac' || lowerTranscript == 'ac ai' || lowerTranscript == 'hey ac') {
+          _lastAIResponse = 'Haan bhai, bolo? Main AC hoon, tumhara assistant. Kya help chahiye?';
+          await _ttsService.speak(_lastAIResponse);
+          _setStatus('Ready');
+          _isProcessingCommand = false;
+          notifyListeners();
+          return _lastAIResponse;
+        }
+        
+        // If no wake word, still process (continuous listening mode)
+        debugPrint('No wake word, but processing: $transcript');
+      }
       
       final commandResult = await _commandProcessor.processCommand(transcript);
       
