@@ -81,8 +81,8 @@ dependencies:
   # Media Player Control
   audio_session: ^0.1.19
   
-  # Document Scanner
-  camerax_android: ^0.0.1
+  # Camera (for document scanning)
+  camera: ^0.10.5+9
   
   # File Download
   flutter_downloader: ^1.11.7
