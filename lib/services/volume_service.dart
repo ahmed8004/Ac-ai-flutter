@@ -1,25 +1,50 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_volume_controller/flutter_volume_controller.dart';
 
 class VolumeService {
   static const MethodChannel _channel = MethodChannel('ac.ai/volume');
+  bool _initialized = false;
+
+  Future<void> init() async {
+    if (_initialized) return;
+    try {
+      await FlutterVolumeController.updateVolumePanelUI(false);
+      _initialized = true;
+      debugPrint('Volume Service initialized');
+    } catch (e) {
+      debugPrint('Volume init error: $e');
+    }
+  }
   
   Future<void> setVolume(int level) async {
     try {
-      await _channel.invokeMethod('setVolume', {'level': level});
+      await FlutterVolumeController.setVolume(level.toDouble() / 100.0);
       debugPrint('Volume set to $level');
-    } on PlatformException catch (e) {
-      debugPrint('Volume control error: ${e.message}');
+    } catch (e) {
+      debugPrint('Volume control error: $e');
+      // Fallback to method channel
+      try {
+        await _channel.invokeMethod('setVolume', {'level': level});
+      } on PlatformException catch (pe) {
+        debugPrint('Fallback error: ${pe.message}');
+      }
     }
   }
 
   Future<int> getVolume() async {
     try {
-      final int? volume = await _channel.invokeMethod('getVolume');
-      return volume ?? 50;
-    } on PlatformException catch (e) {
-      debugPrint('Get volume error: ${e.message}');
-      return 50;
+      final volume = await FlutterVolumeController.getVolume();
+      return ((volume ?? 0.5) * 100).toInt();
+    } catch (e) {
+      debugPrint('Get volume error: $e');
+      // Fallback to method channel
+      try {
+        final int? vol = await _channel.invokeMethod('getVolume');
+        return vol ?? 50;
+      } on PlatformException {
+        return 50;
+      }
     }
   }
 
