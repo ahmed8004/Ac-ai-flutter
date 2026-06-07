@@ -124,7 +124,8 @@ class AppController extends ChangeNotifier {
 
     if (!_permissionService.essentialGranted) {
       final granted = await requestAllPermissions();
-      if (!granted) {
+      final allGranted = granted.values.every((v) => v);
+      if (!allGranted) {
         return 'Permissions required. Please grant all permissions.';
       }
     }
@@ -153,7 +154,7 @@ class AppController extends ChangeNotifier {
       await Future.delayed(const Duration(milliseconds: 500));
       transcript ??= _sttService.getLastResult();
 
-      if (transcript == null || transcript.isEmpty) {
+      if (transcript.isEmpty) {
         _setStatus('No input detected');
         _isProcessingCommand = false;
         notifyListeners();

@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
 
 class SettingsPanel extends StatefulWidget {
-  const SettingsPanel({Key? key}) : super(key: key});
+  const SettingsPanel({Key? key}) : super(key: key);
 
   @override
   State<SettingsPanel> createState() => _SettingsPanelState();
@@ -16,10 +16,6 @@ class _SettingsPanelState extends State<SettingsPanel> {
   bool _voiceFeedback = true;
   String _theme = 'Dark';
   String _orbColor = 'Cyan';
-  String _effects = 'High';
-  bool _backgroundMode = true;
-  bool _notifications = true;
-  bool _autoStart = false;
   
   // API Key
   TextEditingController _apiKeyController = TextEditingController();
