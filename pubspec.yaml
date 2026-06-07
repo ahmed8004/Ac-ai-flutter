@@ -52,7 +52,7 @@ dependencies:
   image_picker: ^1.2.2
   
   # Torch/Flashlight
-  torch_light: ^2.0.0
+  torch_light: ^1.0.0
   
   # Connectivity
   connectivity_plus: ^7.1.1
