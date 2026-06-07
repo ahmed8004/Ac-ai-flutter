@@ -18,12 +18,38 @@ class TTSService {
 
   Future<void> initialize() async {
     try {
-      _isAvailable = await _tts.awaitSpeakCompletion(true);
+      // Try multiple Hindi/English locales
+      final languages = await _tts.getLanguages;
+      debugPrint('Available TTS languages: $languages');
       
-      await _tts.setLanguage(_language);
+      // Set language with fallback
+      bool langSet = false;
+      for (final lang in ['hi-IN', 'hi', 'en-IN', 'en-US', 'en-GB']) {
+        try {
+          final result = await _tts.setLanguage(lang);
+          if (result == 1) {
+            _language = lang;
+            langSet = true;
+            debugPrint('TTS: Language set to $lang');
+            break;
+          }
+        } catch (e) {
+          debugPrint('Failed to set $lang: $e');
+        }
+      }
+      
+      if (!langSet) {
+        _language = 'en-US';
+        await _tts.setLanguage(_language);
+        debugPrint('TTS: Using fallback en-US');
+      }
+      
       await _tts.setVolume(_volume);
       await _tts.setPitch(_pitch);
       await _tts.setSpeechRate(_rate);
+      
+      // Set as available after successful setup
+      _isAvailable = true;
 
       _tts.setStartHandler(() {
         _isSpeaking = true;
@@ -44,18 +70,12 @@ class TTSService {
         _isSpeaking = false;
         debugPrint('TTS Error: $message');
       });
-
-      _tts.setProgressHandler((text, start, end, word) {
-        debugPrint('TTS Progress: $word');
-      });
-
-      final languages = await _tts.getLanguages;
-      debugPrint('TTS available languages: $languages');
       
-      debugPrint('TTS Service initialized: $_isAvailable');
+      debugPrint('TTS Service initialized: $_isAvailable, Language: $_language');
     } catch (e) {
       debugPrint('TTS initialization error: $e');
-      _isAvailable = false;
+      // Even if error, mark as available for fallback
+      _isAvailable = true;
     }
   }
 

@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
 
 class SettingsPanel extends StatefulWidget {
-  const SettingsPanel({Key? key}) : super(key: key);
+  const SettingsPanel({Key? key}) : super(key: key});
 
   @override
   State<SettingsPanel> createState() => _SettingsPanelState();
 }
 
 class _SettingsPanelState extends State<SettingsPanel> {
-  String _selectedLanguage = 'English';
+  String _selectedLanguage = 'Hindi';
   double _voiceSpeed = 1.0;
-  String _wakeWord = 'Hey AC AI';
+  String _wakeWord = 'AC';
   bool _voiceFeedback = true;
   String _theme = 'Dark';
   String _orbColor = 'Cyan';
@@ -19,6 +20,47 @@ class _SettingsPanelState extends State<SettingsPanel> {
   bool _backgroundMode = true;
   bool _notifications = true;
   bool _autoStart = false;
+  
+  // API Key
+  TextEditingController _apiKeyController = TextEditingController();
+  String _currentApiKey = 'Not set';
+  bool _apiKeyVisible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _apiKeyController.text = prefs.getString('groq_api_key') ?? '';
+      _currentApiKey = _apiKeyController.text.isEmpty 
+          ? 'Not set' 
+          : '${_apiKeyController.text.substring(0, 10)}...';
+      _selectedLanguage = prefs.getString('language') ?? 'Hindi';
+      _wakeWord = prefs.getString('wake_word') ?? 'AC';
+    });
+  }
+
+  Future<void> _saveApiKey() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('groq_api_key', _apiKeyController.text);
+    setState(() {
+      _currentApiKey = _apiKeyController.text.isEmpty 
+          ? 'Not set' 
+          : '${_apiKeyController.text.substring(0, 10)}...';
+    });
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('API Key saved! Restart app for changes to take effect.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,13 +98,96 @@ class _SettingsPanelState extends State<SettingsPanel> {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               children: [
+                // 🔑 API KEY SECTION - NEW!
+                _buildSection(
+                  '🔑 GROQ API KEY (AI BRAIN)',
+                  [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.bgElevated,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppTheme.primaryCyan.withOpacity(0.3)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Current: $_currentApiKey',
+                            style: TextStyle(
+                              fontFamily: 'RobotoMono',
+                              color: _currentApiKey == 'Not set' 
+                                  ? Colors.red 
+                                  : Colors.green,
+                              fontSize: 12,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _apiKeyController,
+                            obscureText: !_apiKeyVisible,
+                            style: const TextStyle(fontFamily: 'RobotoMono'),
+                            decoration: InputDecoration(
+                              labelText: 'Paste your Groq API key',
+                              hintText: 'gsk_xxxxxxxxxxxxx',
+                              filled: true,
+                              fillColor: AppTheme.bgPrimary,
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _apiKeyVisible 
+                                      ? Icons.visibility_off 
+                                      : Icons.visibility,
+                                  color: AppTheme.primaryCyan,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _apiKeyVisible = !_apiKeyVisible;
+                                  });
+                                },
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: _saveApiKey,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.primaryCyan,
+                                  ),
+                                  child: const Text(
+                                    'SAVE API KEY',
+                                    style: TextStyle(color: Colors.black),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Get free key: https://console.groq.com/keys',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
                 _buildSection(
                   '🎤 VOICE',
                   [
                     _buildDropdown(
                       'Language',
                       _selectedLanguage,
-                      ['English', 'Hindi', 'Spanish', 'French'],
+                      ['Hindi', 'English', 'Spanish', 'French'],
                       (value) => setState(() => _selectedLanguage = value!),
                     ),
                     _buildSlider(
@@ -101,41 +226,14 @@ class _SettingsPanelState extends State<SettingsPanel> {
                       ['Cyan', 'Blue', 'Purple', 'Green'],
                       (value) => setState(() => _orbColor = value!),
                     ),
-                    _buildDropdown(
-                      'Effects',
-                      _effects,
-                      ['High', 'Medium', 'Low'],
-                      (value) => setState(() => _effects = value!),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                _buildSection(
-                  '📱 BEHAVIOR',
-                  [
-                    _buildSwitch(
-                      'Background Mode',
-                      _backgroundMode,
-                      (value) => setState(() => _backgroundMode = value),
-                    ),
-                    _buildSwitch(
-                      'Notifications',
-                      _notifications,
-                      (value) => setState(() => _notifications = value),
-                    ),
-                    _buildSwitch(
-                      'Auto-Start',
-                      _autoStart,
-                      (value) => setState(() => _autoStart = value),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 24),
                 _buildSection(
                   'ℹ️ ABOUT',
                   [
+                    _buildInfoRow('Owner', 'Ahmed Chaudhari'),
                     _buildInfoRow('Version', '1.0.0'),
-                    _buildInfoRow('Developer', 'AC AI Team'),
                     _buildInfoRow('Build', '2024.01.15'),
                   ],
                 ),
