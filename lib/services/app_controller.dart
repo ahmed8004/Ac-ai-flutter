@@ -44,101 +44,46 @@ class AppController extends ChangeNotifier {
 
     try {
       _setStatus('Requesting permissions...');
-      
       await _permissionService.initialize();
       
-      // Request all permissions
-      await requestAllPermissions();
-
-      _setStatus('Initializing voice...');
-      
-      // Initialize services in parallel
-      await Future.wait([
-        _sttService.initialize(),
-        _ttsService.initialize(),
-      ]);
-
-      // Set Hindi locale if available
-      try {
-        final locales = await _sttService.getAvailableLocales();
-        if (locales.contains('hi-IN')) {
-          await _sttService.setLocale('hi-IN');
-          await _ttsService.setLanguage('hi-IN');
-        } else if (locales.contains('en-IN')) {
-          await _sttService.setLocale('en-IN');
-          await _ttsService.setLanguage('en-IN');
-        }
-      } catch (e) {
-        debugPrint('Locale set error: $e');
+      // Request microphone permission
+      final micGranted = await _permissionService.requestMicrophone();
+      if (!micGranted) {
+        _setStatus('Microphone permission needed!');
+        return;
       }
+
+      _setStatus('Initializing voice services...');
+      
+      // Initialize services
+      final sttOk = await _sttService.initialize();
+      if (!sttOk) {
+        _setStatus('Voice recognition not available');
+        return;
+      }
+      
+      await _ttsService.initialize();
 
       _isInitialized = true;
-      _permissionsGranted = _permissionService.essentialGranted;
-      _setStatus('Ready! Say "AC" to start');
+      _permissionsGranted = true;
+      _setStatus('Ready! Tap button and speak');
       
-      debugPrint('App Controller initialized');
+      debugPrint('✅ App Controller initialized');
     } catch (e) {
       _setStatus('Initialization failed: $e');
-      debugPrint('App Controller initialization error: $e');
+      debugPrint('❌ Init error: $e');
     }
   }
 
-  bool _isWakeWordDetected(String text) {
-    final lowerText = text.toLowerCase().trim();
-    
-    // DEBUG: Always log what we received
-    debugPrint('🎤 Checking wake word in: "$lowerText"');
-    
-    // Wake words list
-    final wakeWords = [
-      'ac',
-      'hey ac',
-      'ac ai',
-      'ac bhai',
-      'ac suno',
-      'ac help',
-      'hey ac ai',
-      'ac ji',
-      'ac assistant',
-      'namaste ac',
-    ];
-    
-    for (final wakeWord in wakeWords) {
-      if (lowerText.startsWith(wakeWord) || lowerText == wakeWord) {
-        debugPrint('✅ Wake word detected: "$wakeWord"');
-        return true;
-      }
-    }
-    
-    // Check if "AC" is mentioned in beginning (first 5 words)
-    final words = lowerText.split(' ');
-    if (words.length > 0 && words.length <= 5) {
-      if (words.contains('ac')) {
-        debugPrint('✅ Wake word "ac" found in first 5 words');
-        return true;
-      }
-    }
-    
-    // DEBUG: For testing, accept any command (remove this in production)
-    if (lowerText.isNotEmpty) {
-      debugPrint('⚠️ No wake word, but processing anyway: "$lowerText"');
-      return true; // TEMP: Accept all commands
-    }
-    
-    return false;
-  }
-
-  Future<String> processVoiceInput() async {
+  Future<void> processVoiceInput() async {
     if (!_isInitialized) {
-      return 'App initializing... please wait';
+      await _ttsService.speak('Please wait, initializing...');
+      return;
     }
 
     if (!_permissionService.essentialGranted) {
-      final granted = await requestAllPermissions();
-      final allGranted = granted.values.every((v) => v);
-      if (!allGranted) {
-        return 'Permissions required. Please grant all permissions.';
-      }
+      await _ttsService.speak('Microphone permission needed');
+      return;
     }
 
     try {
@@ -146,124 +91,108 @@ class AppController extends ChangeNotifier {
       _isProcessingCommand = true;
       notifyListeners();
 
-      String? transcript = await _sttService.startListening(
-        onSoundLevel: (level) {
-          // Sound level callback (for orb animation)
-        },
-        onPartialResult: (text) {
-          // Partial result callback
-        },
-        onFinalResult: (text) {
-          // Final result callback
-        },
-        onError: (error) {
-          debugPrint('STT Error: $error');
-        },
-      );
-
-      // Wait a bit for final result
-      await Future.delayed(const Duration(milliseconds: 500));
-      transcript ??= _sttService.getLastResult();
-
-      if (transcript.isEmpty) {
-        _setStatus('No input detected');
+      debugPrint('🎤 Starting voice input...');
+      
+      // Listen for speech
+      final transcript = await _sttService.listen();
+      
+      if (transcript == null || transcript.isEmpty) {
+        _setStatus('No speech detected');
+        await _ttsService.speak('Sorry, mujhe kuch sunai nahi diya');
         _isProcessingCommand = false;
         notifyListeners();
-        return 'No input detected';
+        return;
       }
 
       _lastUserInput = transcript;
       _setStatus('Processing: "$transcript"');
-      debugPrint('📝 Processing transcript: "$transcript"');
+      debugPrint('📝 Processing: "$transcript"');
       
-      // Check wake word (now accepts all commands)
-      if (!_isWakeWordDetected(transcript)) {
-        debugPrint('⚠️ Wake word not detected, skipping...');
-        _lastAIResponse = 'Please start with "AC" or "Hey AC"';
-        await _ttsService.speak(_lastAIResponse);
-        _setStatus('Ready');
+      // Check for wake word
+      final lower = transcript.toLowerCase().trim();
+      if (!lower.startsWith('ac') && 
+          !lower.startsWith('hey ac') && 
+          !lower.startsWith('ac ai')) {
+        _setStatus('Say "AC" first');
+        await _ttsService.speak('Please start with AC');
         _isProcessingCommand = false;
         notifyListeners();
-        return _lastAIResponse;
+        return;
       }
       
-      // Remove wake word from command
-      String command = transcript.toLowerCase().trim();
-      final wakeWords = ['ac ai', 'hey ac', 'ac'];
-      for (final ww in wakeWords) {
+      // Remove wake word
+      String command = lower;
+      for (final ww in ['ac ai', 'hey ac', 'ac']) {
         if (command.startsWith(ww)) {
           command = command.substring(ww.length).trim();
           break;
         }
       }
       
-      debugPrint('🎯 Command after wake word removal: "$command"');
+      debugPrint('🎯 Command: "$command"');
       
-      // Process the command
+      // Process command
       try {
-        final commandResult = await _commandProcessor.processCommand(command);
+        final result = await _commandProcessor.processCommand(command);
         
-        if (commandResult.success && commandResult.type != CommandType.unknown) {
-          debugPrint('✅ Command executed: ${commandResult.type}');
-          _lastAIResponse = commandResult.message;
-          _setStatus('Ready');
+        if (result.success && result.type != CommandType.unknown) {
+          _lastAIResponse = result.message;
+          _setStatus('Done: ${result.type}');
         } else {
-          debugPrint('🤖 Sending to AI: "$command"');
-          final aiResponse = await _aiBrainService.processInput(command);
-          _lastAIResponse = aiResponse;
-          _setStatus('Ready');
+          _setStatus('Asking AI...');
+          _lastAIResponse = await _aiBrainService.processInput(command);
         }
         
-        // Speak the response
-        debugPrint('🔊 Speaking: "${_lastAIResponse.substring(0, _lastAIResponse.length > 50 ? 50 : _lastAIResponse.length)}..."');
-        await _ttsService.speak(_lastAIResponse);
+        debugPrint('💬 Response: "${_lastAIResponse.substring(0, _lastAIResponse.length > 50 ? 50 : _lastAIResponse.length)}..."');
         
-      } catch (e, stackTrace) {
-        debugPrint('❌ Error processing: $e');
-        debugPrint('Stack: $stackTrace');
-        _lastAIResponse = 'Sorry, kuch galat ho gaya. Please try again.';
+        // Speak response
         await _ttsService.speak(_lastAIResponse);
+        _setStatus('Ready!');
+        
+      } catch (e) {
+        debugPrint('❌ Process error: $e');
+        _lastAIResponse = 'Sorry, error ho gaya';
+        await _ttsService.speak(_lastAIResponse);
+        _setStatus('Error occurred');
       }
 
       _isProcessingCommand = false;
       notifyListeners();
 
-      return _lastAIResponse;
     } catch (e) {
+      debugPrint('❌ Voice input error: $e');
       _isProcessingCommand = false;
-      _setStatus('Error occurred');
+      _setStatus('Error: $e');
       notifyListeners();
-      debugPrint('processVoiceInput error: $e');
-      return 'Error: $e';
     }
   }
 
-  Future<String> processTextInput(String input) async {
+  Future<void> processTextInput(String input) async {
     if (!_isInitialized) {
-      return 'App initializing... please wait';
+      await _ttsService.speak('Please wait...');
+      return;
     }
 
     try {
       _setStatus('Processing...');
       _lastUserInput = input;
 
-      final commandResult = await _commandProcessor.processCommand(input);
+      final result = await _commandProcessor.processCommand(input);
       
-      if (commandResult.success && commandResult.type != CommandType.unknown) {
-        _lastAIResponse = commandResult.message;
-        await _ttsService.speak(commandResult.message);
+      if (result.success && result.type != CommandType.unknown) {
+        _lastAIResponse = result.message;
+        await _ttsService.speak(result.message);
       } else {
         final aiResponse = await _aiBrainService.processInput(input);
         _lastAIResponse = aiResponse;
         await _ttsService.speak(aiResponse);
       }
 
-      _setStatus('Ready');
+      _setStatus('Ready!');
       notifyListeners();
-      return _lastAIResponse;
     } catch (e) {
-      _setStatus('Error occurred');
-      return 'Error: $e';
+      _setStatus('Error: $e');
+      debugPrint('Text input error: $e');
     }
   }
 
@@ -288,8 +217,8 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> stopListening() async {
-    await _sttService.stopListening();
-    _setStatus('Ready');
+    await _sttService.stop();
+    _setStatus('Stopped');
     notifyListeners();
   }
 

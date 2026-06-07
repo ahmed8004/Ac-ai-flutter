@@ -1,151 +1,165 @@
 import 'package:flutter/foundation.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
-import 'package:speech_to_text/speech_recognition_result.dart';
-import 'package:speech_to_text/speech_recognition_error.dart';
 
 class STTService {
   final stt.SpeechToText _speech = stt.SpeechToText();
   bool _isAvailable = false;
   bool _isListening = false;
-  String _currentLocale = 'hi-IN';
+  String _currentLocale = 'en-US';
   String _lastResult = '';
 
   bool get isAvailable => _isAvailable;
   bool get isListening => _isListening;
   String getLastResult() => _lastResult;
 
-  Future<void> initialize() async {
+  Future<bool> initialize() async {
     try {
+      debugPrint('🔊 STT: Initializing...');
+      
       _isAvailable = await _speech.initialize(
-        onError: _handleError,
-        onStatus: _handleStatus,
-        debugLogging: kDebugMode,
+        onError: (error) {
+          debugPrint('❌ STT Error: ${error.errorMsg}');
+          _isListening = false;
+        },
+        onStatus: (status) {
+          debugPrint('📊 STT Status: $status');
+          if (status == 'done' || status == 'notListening') {
+            _isListening = false;
+          }
+        },
+        debugLogging: true,
       );
       
-      debugPrint('STT Service initialized: $_isAvailable');
+      debugPrint('✅ STT initialized: $_isAvailable');
       
       if (_isAvailable) {
-        final locales = await _speech.locales();
-        debugPrint('Available locales: ${locales.map((l) => l.localeId).join(', ')}');
-        
-        if (locales.any((l) => l.localeId == 'hi-IN')) {
-          _currentLocale = 'hi-IN';
-        } else if (locales.any((l) => l.localeId == 'en-IN')) {
-          _currentLocale = 'en-IN';
-        } else {
-          _currentLocale = 'en-US';
+        // Try to get available locales
+        try {
+          final locales = await _speech.locales();
+          debugPrint('🌍 Available locales: ${locales.length}');
+          
+          // Prefer English for better accuracy
+          if (locales.any((l) => l.localeId == 'en-IN')) {
+            _currentLocale = 'en-IN';
+          } else if (locales.any((l) => l.localeId == 'en-US')) {
+            _currentLocale = 'en-US';
+          } else if (locales.any((l) => l.localeId == 'hi-IN')) {
+            _currentLocale = 'hi-IN';
+          }
+          
+          debugPrint('🎯 STT using locale: $_currentLocale');
+        } catch (e) {
+          debugPrint('⚠️ Could not get locales: $e');
         }
-        
-        debugPrint('Using locale: $_currentLocale');
       }
+      
+      return _isAvailable;
     } catch (e) {
-      debugPrint('STT initialization error: $e');
+      debugPrint('❌ STT initialization failed: $e');
       _isAvailable = false;
+      return false;
     }
   }
 
-  Future<String?> startListening({
-    required Function(double) onSoundLevel,
-    required Function(String) onPartialResult,
-    required Function(String) onFinalResult,
-    required Function(String) onError,
-  }) async {
-    if (_isListening || !_isAvailable) {
-      debugPrint('STT: Cannot start - already listening or not available');
+  Future<String?> listen() async {
+    if (_isListening) {
+      debugPrint('⚠️ Already listening');
       return null;
     }
-
+    
+    if (!_isAvailable) {
+      debugPrint('❌ STT not available');
+      return null;
+    }
+    
     _isListening = true;
-    debugPrint('STT: Started listening in $_currentLocale');
-
-    String? finalTranscript;
-
+    _lastResult = '';
+    
     try {
+      debugPrint('🎤 Starting to listen...');
+      
       await _speech.listen(
-        onResult: (SpeechRecognitionResult result) {
-          final transcript = result.recognizedWords;
-          _lastResult = transcript;
-          
-          if (result.finalResult) {
-            finalTranscript = transcript;
-            onFinalResult(transcript);
-            debugPrint('STT Final: $transcript');
-          } else {
-            onPartialResult(transcript);
-          }
-        },
-        listenOptions: stt.SpeechListenOptions(
-          partialResults: true,
-          cancelOnError: true,
-        ),
-        listenFor: const Duration(seconds: 30),
-        pauseFor: const Duration(seconds: 3),
-        onSoundLevelChange: (level) {
-          final normalizedLevel = (level + 160) / 160;
-          onSoundLevel(normalizedLevel.clamp(0.0, 1.0));
+        onResult: (result) {
+          _lastResult = result.recognizedWords;
+          debugPrint('📝 Heard: "$_lastResult"');
         },
         localeId: _currentLocale,
+        listenMode: stt.ListenMode.confirmation,
+        partialResults: true,
       );
+      
+      // Wait for speech with timeout
+      int timeout = 0;
+      while (_isListening && timeout < 100) {
+        await Future.delayed(const Duration(milliseconds: 100));
+        timeout++;
+        
+        if (_lastResult.isNotEmpty) {
+          // Got some speech, wait a bit more for completion
+          await Future.delayed(const Duration(milliseconds: 1000));
+          break;
+        }
+      }
+      
+      await stop();
+      
+      debugPrint('✅ Final result: "$_lastResult"');
+      return _lastResult.isNotEmpty ? _lastResult : null;
+      
     } catch (e) {
-      debugPrint('STT Listen error: $e');
-      onError(e.toString());
+      debugPrint('❌ Listen error: $e');
       _isListening = false;
       return null;
     }
-
-    return finalTranscript;
   }
 
-  Future<void> stopListening() async {
+  Future<void> stop() async {
     if (!_isListening) return;
     
-    await _speech.stop();
+    try {
+      await _speech.stop();
+      debugPrint('🛑 STT stopped');
+    } catch (e) {
+      debugPrint('⚠️ Stop error: $e');
+    }
+    
     _isListening = false;
-    debugPrint('STT: Stopped listening');
   }
 
   Future<void> cancel() async {
     if (!_isListening) return;
     
-    await _speech.cancel();
-    _isListening = false;
-    debugPrint('STT: Cancelled');
-  }
-
-  Future<void> setLocale(String localeId) async {
-    final locales = await _speech.locales();
-    if (locales.any((l) => l.localeId == localeId)) {
-      _currentLocale = localeId;
-      debugPrint('STT: Locale set to $localeId');
-    } else {
-      debugPrint('STT: Locale $localeId not available');
+    try {
+      await _speech.cancel();
+      debugPrint('❌ STT cancelled');
+    } catch (e) {
+      debugPrint('⚠️ Cancel error: $e');
     }
+    
+    _isListening = false;
   }
 
   Future<List<String>> getAvailableLocales() async {
     if (!_isAvailable) return [];
     
-    final locales = await _speech.locales();
-    return locales.map((l) => l.localeId).toList();
-  }
-
-  void _handleError(SpeechRecognitionError error) {
-    debugPrint('STT Error: ${error.errorMsg} - ${error.permanent}');
-    _isListening = false;
-  }
-
-  void _handleStatus(String status) {
-    debugPrint('STT Status: $status');
-    if (status == 'done' || status == 'notListening') {
-      _isListening = false;
+    try {
+      final locales = await _speech.locales();
+      return locales.map((l) => l.localeId).toList();
+    } catch (e) {
+      debugPrint('⚠️ Get locales error: $e');
+      return [];
     }
   }
 
   void dispose() {
     if (_isListening) {
-      _speech.cancel();
+      try {
+        _speech.cancel();
+      } catch (e) {
+        debugPrint('⚠️ Dispose error: $e');
+      }
     }
     _isListening = false;
-    debugPrint('STT Service disposed');
+    debugPrint('👋 STT Service disposed');
   }
 }
