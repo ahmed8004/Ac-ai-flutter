@@ -32,8 +32,8 @@ jobs:
     - name: Get dependencies
       run: flutter pub get
 
-    - name: Build APK (skip validation)
-      run: flutter build apk --debug --no-tree-shake-icons --android-skip-build-dependency-validation
+    - name: Build APK
+      run: flutter build apk --debug --no-tree-shake-icons
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
