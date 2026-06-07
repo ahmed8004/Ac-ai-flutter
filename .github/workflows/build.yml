@@ -38,6 +38,19 @@ jobs:
     - name: Build APK
       run: flutter build apk --debug --no-tree-shake-icons 2>&1 | tee build.log
 
+    - name: List build outputs
+      run: |
+        echo "Build outputs:"
+        ls -la build/app/outputs/flutter-apk/ || echo "Path not found"
+        ls -la build/app/outputs/ || echo "Outputs not found"
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: ac-ai-debug-apk
+        path: build/app/outputs/flutter-apk/app-debug.apk
+        if-no-files-found: error
+
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
