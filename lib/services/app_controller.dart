@@ -17,7 +17,7 @@ class AppController extends ChangeNotifier {
   bool _permissionsGranted = false;
   String _lastUserInput = '';
   String _lastAIResponse = '';
-  String _statusMessage = 'Ready';
+  String _statusMessage = 'Initializing...';
 
   AppController({
     STTService? sttService,
@@ -43,41 +43,42 @@ class AppController extends ChangeNotifier {
     if (_isInitialized) return;
 
     try {
-      _setStatus('Initializing permissions...');
+      _setStatus('Requesting permissions...');
       
       await _permissionService.initialize();
       
-      if (!_permissionService.essentialGranted) {
-        _setStatus('Requesting permissions...');
-        final micGranted = await _permissionService.requestMicrophone();
-        
-        if (!micGranted) {
-          _setStatus('Microphone permission required');
-          return;
-        }
-      }
+      // Request all permissions
+      await requestAllPermissions();
 
-      _setStatus('Initializing services...');
+      _setStatus('Initializing voice...');
       
-      await _sttService.initialize();
-      await _ttsService.initialize();
+      // Initialize services in parallel
+      await Future.wait([
+        _sttService.initialize(),
+        _ttsService.initialize(),
+      ]);
 
-      final locales = await _sttService.getAvailableLocales();
-      if (locales.contains('hi-IN')) {
-        await _sttService.setLocale('hi-IN');
-        await _ttsService.setLanguage('hi-IN');
-      } else if (locales.contains('en-IN')) {
-        await _sttService.setLocale('en-IN');
-        await _ttsService.setLanguage('en-IN');
+      // Set Hindi locale if available
+      try {
+        final locales = await _sttService.getAvailableLocales();
+        if (locales.contains('hi-IN')) {
+          await _sttService.setLocale('hi-IN');
+          await _ttsService.setLanguage('hi-IN');
+        } else if (locales.contains('en-IN')) {
+          await _sttService.setLocale('en-IN');
+          await _ttsService.setLanguage('en-IN');
+        }
+      } catch (e) {
+        debugPrint('Locale set error: $e');
       }
 
       _isInitialized = true;
-      _permissionsGranted = true;
-      _setStatus('Ready');
+      _permissionsGranted = _permissionService.essentialGranted;
+      _setStatus('Ready! Say "AC" to start');
       
       debugPrint('App Controller initialized');
     } catch (e) {
-      _setStatus('Initialization failed');
+      _setStatus('Initialization failed: $e');
       debugPrint('App Controller initialization error: $e');
     }
   }
@@ -85,7 +86,7 @@ class AppController extends ChangeNotifier {
   bool _isWakeWordDetected(String text) {
     final lowerText = text.toLowerCase().trim();
     
-    // Wake words: "AC", "Hey AC", "AC AI", "AC bhai", "AC suno"
+    // Wake words list
     final wakeWords = [
       'ac',
       'hey ac',
@@ -96,6 +97,7 @@ class AppController extends ChangeNotifier {
       'hey ac ai',
       'ac ji',
       'ac assistant',
+      'namaste ac',
     ];
     
     for (final wakeWord in wakeWords) {
@@ -117,11 +119,14 @@ class AppController extends ChangeNotifier {
 
   Future<String> processVoiceInput() async {
     if (!_isInitialized) {
-      return 'App not initialized';
+      return 'App initializing... please wait';
     }
 
     if (!_permissionService.essentialGranted) {
-      return 'Permissions not granted';
+      final granted = await requestAllPermissions();
+      if (!granted) {
+        return 'Permissions required. Please grant all permissions.';
+      }
     }
 
     try {
@@ -129,20 +134,24 @@ class AppController extends ChangeNotifier {
       _isProcessingCommand = true;
       notifyListeners();
 
-      final transcript = await _sttService.startListening(
+      String? transcript = await _sttService.startListening(
         onSoundLevel: (level) {
-          debugPrint('Sound level: $level');
+          // Sound level callback (for orb animation)
         },
         onPartialResult: (text) {
-          debugPrint('Partial: $text');
+          // Partial result callback
         },
         onFinalResult: (text) {
-          debugPrint('Final: $text');
+          // Final result callback
         },
         onError: (error) {
           debugPrint('STT Error: $error');
         },
       );
+
+      // Wait a bit for final result
+      await Future.delayed(const Duration(milliseconds: 500));
+      transcript ??= _sttService.getLastResult();
 
       if (transcript == null || transcript.isEmpty) {
         _setStatus('No input detected');
@@ -152,11 +161,10 @@ class AppController extends ChangeNotifier {
       }
 
       _lastUserInput = transcript;
-      _setStatus('Processing...');
+      _setStatus('Processing: "$transcript"');
       
-      // Check if wake word detected
+      // Check wake word
       if (!_isWakeWordDetected(transcript)) {
-        // Check if user just said "AC" to activate
         final lowerTranscript = transcript.toLowerCase().trim();
         if (lowerTranscript == 'ac' || lowerTranscript == 'ac ai' || lowerTranscript == 'hey ac') {
           _lastAIResponse = 'Haan bhai, bolo? Main AC hoon, tumhara assistant. Kya help chahiye?';
@@ -166,8 +174,7 @@ class AppController extends ChangeNotifier {
           notifyListeners();
           return _lastAIResponse;
         }
-        
-        // If no wake word, still process (continuous listening mode)
+        // If no wake word detected, still process for testing
         debugPrint('No wake word, but processing: $transcript');
       }
       
@@ -192,13 +199,14 @@ class AppController extends ChangeNotifier {
       _isProcessingCommand = false;
       _setStatus('Error occurred');
       notifyListeners();
+      debugPrint('processVoiceInput error: $e');
       return 'Error: $e';
     }
   }
 
   Future<String> processTextInput(String input) async {
     if (!_isInitialized) {
-      return 'App not initialized';
+      return 'App initializing... please wait';
     }
 
     try {

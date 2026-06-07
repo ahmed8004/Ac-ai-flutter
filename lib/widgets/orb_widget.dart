@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'dart:math' as math;
 import '../models/orb_state.dart';
 import '../theme/app_theme.dart';
 import '../utils/animations.dart';

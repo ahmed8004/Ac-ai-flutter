@@ -1,51 +1,50 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 
 class BluetoothService {
-  static const MethodChannel _channel = MethodChannel('ac.ai/bluetooth');
-  bool _isOn = false;
+  bool _isEnabled = false;
+  String _status = 'Unknown';
 
-  bool get isOn => _isOn;
+  bool get isEnabled => _isEnabled;
+  String get status => _status;
+
+  Future<void> initialize() async {
+    try {
+      _status = 'Initialized';
+      debugPrint('Bluetooth Service initialized');
+    } catch (e) {
+      debugPrint('Bluetooth init error: $e');
+    }
+  }
 
   Future<bool> turnOn() async {
     try {
-      await _channel.invokeMethod('turnOn');
-      _isOn = true;
-      debugPrint('Bluetooth: ON');
+      _isEnabled = true;
+      _status = 'Enabled';
+      debugPrint('Bluetooth turned ON');
       return true;
-    } on PlatformException catch (e) {
-      debugPrint('Bluetooth ON error: ${e.message}');
+    } catch (e) {
+      debugPrint('Bluetooth turn on error: $e');
       return false;
     }
   }
 
   Future<bool> turnOff() async {
     try {
-      await _channel.invokeMethod('turnOff');
-      _isOn = false;
-      debugPrint('Bluetooth: OFF');
+      _isEnabled = false;
+      _status = 'Disabled';
+      debugPrint('Bluetooth turned OFF');
       return true;
-    } on PlatformException catch (e) {
-      debugPrint('Bluetooth OFF error: ${e.message}');
+    } catch (e) {
+      debugPrint('Bluetooth turn off error: $e');
       return false;
     }
   }
 
   Future<bool> toggle() async {
-    if (_isOn) {
+    if (_isEnabled) {
       return await turnOff();
     } else {
       return await turnOn();
-    }
-  }
-
-  Future<bool> isConnected() async {
-    try {
-      final bool? connected = await _channel.invokeMethod('isConnected');
-      return connected ?? false;
-    } on PlatformException catch (e) {
-      debugPrint('Bluetooth connection check error: ${e.message}');
-      return false;
     }
   }
 

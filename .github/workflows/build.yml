@@ -3,10 +3,13 @@ name: Build APK
 on:
   push:
     branches: [ master, main ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
     - name: Checkout code
@@ -42,7 +45,6 @@ jobs:
       run: |
         echo "Build outputs:"
         ls -la build/app/outputs/flutter-apk/ || echo "Path not found"
-        ls -la build/app/outputs/ || echo "Outputs not found"
 
     - name: Upload APK
       uses: actions/upload-artifact@v4

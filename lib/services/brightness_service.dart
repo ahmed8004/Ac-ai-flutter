@@ -4,16 +4,19 @@ import 'package:flutter/services.dart';
 class BrightnessService {
   static const MethodChannel _channel = MethodChannel('ac.ai/brightness');
   double _currentBrightness = 0.5;
+  bool _isAvailable = true;
 
   double get currentBrightness => _currentBrightness;
+  bool get isAvailable => _isAvailable;
 
   Future<void> initialize() async {
     try {
       final brightness = await _channel.invokeMethod('getBrightness');
       _currentBrightness = (brightness ?? 50) / 100.0;
-      debugPrint('Brightness initialized: $_currentBrightness');
+      debugPrint('Brightness Service initialized: $_currentBrightness');
     } catch (e) {
-      debugPrint('Brightness init error: $e');
+      debugPrint('Brightness init error (using default): $e');
+      _isAvailable = false;
     }
   }
 
@@ -26,6 +29,10 @@ class BrightnessService {
     } catch (e) {
       debugPrint('Brightness set error: $e');
     }
+  }
+
+  Future<void> setLevel(int level) async {
+    await setBrightness(level / 100.0);
   }
 
   Future<void> bright() async {

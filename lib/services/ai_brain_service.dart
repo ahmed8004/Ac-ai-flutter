@@ -8,9 +8,10 @@ class AIBrainService {
   static const String _groqApiUrl = 'https://api.groq.com/openai/v1/chat/completions';
   static const String _model = 'llama-3.3-70b-versatile';
   
-  // Fallback API key (in case settings not loaded)
-  // Note: Users should set their own API key in Settings panel
-  static const String _fallbackApiKey = 'YOUR_FALLBACK_KEY_HERE';
+  // Fallback API key (for demo mode if user doesn't set)
+  // Note: Replace with your own Groq API key in Settings panel
+  // Get free key: https://console.groq.com/keys
+  static const String _fallbackApiKey = 'YOUR_GROQ_API_KEY_HERE';
 
   bool _isProcessing = false;
   final List<Map<String, String>> _conversationHistory = [];
@@ -28,8 +29,8 @@ class AIBrainService {
       final prefs = await SharedPreferences.getInstance();
       _apiKey = prefs.getString('groq_api_key');
       
-      if (_apiKey == null || _apiKey!.isEmpty || _apiKey == 'YOUR_API_KEY_HERE') {
-        debugPrint('⚠️ No API key in settings, using fallback');
+      if (_apiKey == null || _apiKey!.isEmpty || _apiKey == 'YOUR_FALLBACK_KEY_HERE') {
+        debugPrint('Using fallback API key');
         _apiKey = _fallbackApiKey;
       }
       
@@ -54,6 +55,18 @@ class AIBrainService {
         return _ownerService.getResponse(userMessage);
       }
 
+      // Check if asking about capabilities
+      if (_ownerService.isCapabilitiesQuery(userMessage)) {
+        _isProcessing = false;
+        return _ownerService.getCapabilities();
+      }
+
+      // Check if greeting
+      if (_ownerService.isWelcomeQuery(userMessage)) {
+        _isProcessing = false;
+        return _ownerService.getWelcomeMessage();
+      }
+
       _addToHistory('user', userMessage);
 
       // Get API key
@@ -62,11 +75,12 @@ class AIBrainService {
       // Add system context about owner
       final systemContext = '''
 You are AC AI, an intelligent voice assistant created by Ahmed Chaudhari.
+
 Owner Information:
 - Name: Ahmed Chaudhari
 - Profession: Ethical Hacker, Cyber Security Expert, Network Administrator
 - Location: Sangamner, Maharashtra
-- Skills: Cybersecurity, Ethical Hacking, Network Administration, Penetration Testing
+- Skills: ${_ownerService.ownerSkills.join(', ')}
 
 Rules:
 - Always respond in Hindi/Hinglish if user speaks Hindi
@@ -74,6 +88,7 @@ Rules:
 - If asked about owner, give full details about Ahmed Chaudhari
 - Respond to "AC" as your name (not just "AC AI")
 - You can be called by: "AC", "Hey AC", "AC AI", "AC bhai"
+- Keep responses short (2-3 sentences max for voice)
 ''';
 
       final messages = [
@@ -106,7 +121,7 @@ Rules:
       } else {
         _isProcessing = false;
         if (response.statusCode == 401) {
-          return 'API Key invalid hai! Settings me sahi Groq API key daalo. (https://console.groq.com/keys)';
+          return 'API Key invalid hai! Settings me sahi Groq API key daalo.';
         }
         return 'Error: Failed to get response (${response.statusCode})';
       }
@@ -118,7 +133,7 @@ Rules:
         return 'Internet connection nahi hai. WiFi/4G ON karo.';
       }
       
-      return 'Error: $e';
+      return 'Sorry, kuch galat ho gaya. Please try again.';
     }
   }
 

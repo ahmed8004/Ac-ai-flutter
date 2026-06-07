@@ -8,9 +8,11 @@ class STTService {
   bool _isAvailable = false;
   bool _isListening = false;
   String _currentLocale = 'hi-IN';
+  String _lastResult = '';
 
   bool get isAvailable => _isAvailable;
   bool get isListening => _isListening;
+  String getLastResult() => _lastResult;
 
   Future<void> initialize() async {
     try {
@@ -62,6 +64,7 @@ class STTService {
       await _speech.listen(
         onResult: (SpeechRecognitionResult result) {
           final transcript = result.recognizedWords;
+          _lastResult = transcript;
           
           if (result.finalResult) {
             finalTranscript = transcript;
@@ -71,14 +74,16 @@ class STTService {
             onPartialResult(transcript);
           }
         },
+        listenOptions: stt.SpeechListenOptions(
+          partialResults: true,
+          cancelOnError: true,
+        ),
         listenFor: const Duration(seconds: 30),
         pauseFor: const Duration(seconds: 3),
-        partialResults: true,
         onSoundLevelChange: (level) {
           final normalizedLevel = (level + 160) / 160;
           onSoundLevel(normalizedLevel.clamp(0.0, 1.0));
         },
-        cancelOnError: true,
         localeId: _currentLocale,
       );
     } catch (e) {

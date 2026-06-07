@@ -1,80 +1,104 @@
-import 'package:flutter/foundation.dart';
-import 'package:flutter_downloader/flutter_downloader.dart';
+import 'dart:io';
+import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
+import 'package:flutter/foundation.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class DownloadService {
-  Future<String?> downloadFile(String url, String fileName) async {
+  double _progress = 0.0;
+  bool _isDownloading = false;
+  String _lastFilePath = '';
+  String _status = 'Idle';
+
+  double get progress => _progress;
+  bool get isDownloading => _isDownloading;
+  String get lastFilePath => _lastFilePath;
+  String get status => _status;
+
+  Future<bool> requestPermissions() async {
     try {
-      final externalDir = await getExternalStorageDirectory();
-      if (externalDir == null) return null;
-
-      final taskId = await FlutterDownloader.enqueue(
-        url: url,
-        savedDir: externalDir.path,
-        fileName: fileName,
-        showNotification: true,
-        openFileFromNotification: true,
-      );
-
-      debugPrint('Download started: $taskId');
-      return taskId;
+      final storage = await Permission.storage.request();
+      return storage.isGranted;
     } catch (e) {
+      debugPrint('Storage permission error: $e');
+      return false;
+    }
+  }
+
+  Future<String?> downloadFile(String url, {String? fileName}) async {
+    if (_isDownloading) {
+      debugPrint('Download already in progress');
+      return null;
+    }
+
+    try {
+      _isDownloading = true;
+      _status = 'Downloading...';
+      _progress = 0.0;
+
+      final hasPermission = await requestPermissions();
+      if (!hasPermission) {
+        _status = 'Storage permission denied';
+        _isDownloading = false;
+        return null;
+      }
+
+      final uri = Uri.parse(url);
+      final name = fileName ?? url.split('/').last;
+
+      final dir = await getApplicationDocumentsDirectory();
+      final filePath = '${dir.path}/$name';
+
+      final response = await http.Client().send(http.Request('GET', uri));
+
+      if (response.statusCode != 200) {
+        _status = 'Download failed: ${response.statusCode}';
+        _isDownloading = false;
+        return null;
+      }
+
+      final contentLength = response.contentLength ?? 0;
+      var receivedBytes = 0;
+
+      final file = File(filePath);
+      final sink = file.openWrite();
+
+      await for (final chunk in response.stream) {
+        sink.add(chunk);
+        receivedBytes += chunk.length;
+        if (contentLength > 0) {
+          _progress = receivedBytes / contentLength;
+        }
+      }
+
+      await sink.close();
+
+      _lastFilePath = filePath;
+      _status = 'Download complete: $name';
+      _isDownloading = false;
+      _progress = 1.0;
+
+      debugPrint('File downloaded: $filePath');
+      return filePath;
+    } catch (e) {
+      _status = 'Download error: $e';
+      _isDownloading = false;
       debugPrint('Download error: $e');
       return null;
     }
   }
 
-  Future<List<DownloadTask>?> getDownloads() async {
+  Future<List<String>> getDownloadedFiles() async {
     try {
-      final tasks = await FlutterDownloader.loadTasks();
-      return tasks;
+      final dir = await getApplicationDocumentsDirectory();
+      final files = await dir.list().toList();
+      return files
+          .where((entity) => entity is File)
+          .map((entity) => entity.path)
+          .toList();
     } catch (e) {
-      debugPrint('Get downloads error: $e');
-      return null;
-    }
-  }
-
-  Future<bool> cancelDownload(String taskId) async {
-    try {
-      await FlutterDownloader.cancel(taskId: taskId);
-      debugPrint('Download cancelled: $taskId');
-      return true;
-    } catch (e) {
-      debugPrint('Cancel download error: $e');
-      return false;
-    }
-  }
-
-  Future<bool> pauseDownload(String taskId) async {
-    try {
-      await FlutterDownloader.pause(taskId: taskId);
-      debugPrint('Download paused: $taskId');
-      return true;
-    } catch (e) {
-      debugPrint('Pause download error: $e');
-      return false;
-    }
-  }
-
-  Future<bool> resumeDownload(String taskId) async {
-    try {
-      await FlutterDownloader.resume(taskId: taskId);
-      debugPrint('Download resumed: $taskId');
-      return true;
-    } catch (e) {
-      debugPrint('Resume download error: $e');
-      return false;
-    }
-  }
-
-  Future<bool> retryDownload(String taskId) async {
-    try {
-      await FlutterDownloader.retry(taskId: taskId);
-      debugPrint('Download retried: $taskId');
-      return true;
-    } catch (e) {
-      debugPrint('Retry download error: $e');
-      return false;
+      debugPrint('List downloads error: $e');
+      return [];
     }
   }
 

@@ -223,27 +223,27 @@ class CommandProcessor {
   Future<CommandResult> _processBluetoothCommand(String input) async {
     final lower = input.toLowerCase();
 
-    if (lower.contains('on') || lower.contains('चालू')) {
+    if (lower.contains('on') || lower.contains('चालू') || lower.contains('enable')) {
       final success = await _bluetoothService.turnOn();
       return CommandResult(
         success: success,
-        message: success ? 'Bluetooth is ON' : 'Failed to turn on Bluetooth',
+        message: success ? 'Bluetooth ON kar diya' : 'Bluetooth ON nahi ho paya. Settings me jaake manually ON karo.',
         type: CommandType.bluetooth,
       );
     }
 
-    if (lower.contains('off') || lower.contains('बंद')) {
+    if (lower.contains('off') || lower.contains('बंद') || lower.contains('disable')) {
       final success = await _bluetoothService.turnOff();
       return CommandResult(
         success: success,
-        message: success ? 'Bluetooth is OFF' : 'Failed to turn off Bluetooth',
+        message: success ? 'Bluetooth OFF kar diya' : 'Bluetooth OFF nahi ho paya. Settings me jaake manually OFF karo.',
         type: CommandType.bluetooth,
       );
     }
 
     return CommandResult(
       success: true,
-      message: 'Say "Bluetooth on" or "Bluetooth off"',
+      message: 'Bluetooth ${_bluetoothService.isEnabled ? "ON hai" : "OFF hai"}. Bolo "Bluetooth on" ya "Bluetooth off"',
       type: CommandType.bluetooth,
     );
   }
@@ -251,6 +251,24 @@ class CommandProcessor {
   // WIFI
   Future<CommandResult> _processWifiCommand(String input) async {
     final lower = input.toLowerCase();
+
+    if (lower.contains('on') || lower.contains('चालू') || lower.contains('enable')) {
+      final success = await _wifiService.turnOn();
+      return CommandResult(
+        success: success,
+        message: success ? 'WiFi ON kar diya' : 'WiFi ON nahi ho paya. Settings me jaake manually ON karo.',
+        type: CommandType.wifi,
+      );
+    }
+
+    if (lower.contains('off') || lower.contains('बंद') || lower.contains('disable')) {
+      final success = await _wifiService.turnOff();
+      return CommandResult(
+        success: success,
+        message: success ? 'WiFi OFF kar diya' : 'WiFi OFF nahi ho paya. Settings me jaake manually OFF karo.',
+        type: CommandType.wifi,
+      );
+    }
 
     if (lower.contains('status') || lower.contains('check')) {
       final connectionType = await _wifiService.getConnectionType();
@@ -261,9 +279,11 @@ class CommandProcessor {
       );
     }
 
+    final isConnected = await _wifiService.isConnected();
+    final connType = await _wifiService.getConnectionType();
     return CommandResult(
       success: true,
-      message: 'WiFi connection: ${await _wifiService.isConnected() ? "Connected" : "Not connected"}',
+      message: isConnected ? 'WiFi Connected: $connType' : 'WiFi Disconnected',
       type: CommandType.wifi,
     );
   }

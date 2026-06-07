@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as parser;
-import 'package:html/dom.dart' as dom;
 
 class WebScraperService {
   Future<String?> fetchWebPage(String url) async {
