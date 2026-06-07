@@ -23,20 +23,26 @@ class AIBrainService {
   bool get isProcessing => _isProcessing;
 
   Future<String> _getApiKey() async {
-    if (_apiKey != null && _apiKey!.isNotEmpty) return _apiKey!;
+    if (_apiKey != null && _apiKey!.isNotEmpty && _apiKey != 'YOUR_FALLBACK_KEY_HERE') {
+      debugPrint('✅ Using cached API key');
+      return _apiKey!;
+    }
     
     try {
       final prefs = await SharedPreferences.getInstance();
-      _apiKey = prefs.getString('groq_api_key');
+      final savedKey = prefs.getString('groq_api_key');
       
-      if (_apiKey == null || _apiKey!.isEmpty || _apiKey == 'YOUR_FALLBACK_KEY_HERE') {
-        debugPrint('Using fallback API key');
-        _apiKey = _fallbackApiKey;
+      if (savedKey != null && savedKey.isNotEmpty && savedKey != 'YOUR_API_KEY_HERE' && savedKey.startsWith('gsk_')) {
+        _apiKey = savedKey;
+        debugPrint('✅ Using saved API key from Settings');
+        return _apiKey!;
       }
       
+      debugPrint('⚠️ No valid API key in Settings, using fallback');
+      _apiKey = _fallbackApiKey;
       return _apiKey!;
     } catch (e) {
-      debugPrint('Error reading API key: $e');
+      debugPrint('❌ Error reading API key: $e');
       return _fallbackApiKey;
     }
   }
@@ -117,9 +123,11 @@ Rules:
         _addToHistory('assistant', aiResponse);
         _isProcessing = false;
         
+        debugPrint('✅ AI Response: "${aiResponse.substring(0, aiResponse.length > 50 ? 50 : aiResponse.length)}..."');
         return aiResponse;
       } else {
         _isProcessing = false;
+        debugPrint('❌ API Error: ${response.statusCode} - ${response.body}');
         if (response.statusCode == 401) {
           return 'API Key invalid hai! Settings me sahi Groq API key daalo.';
         }
@@ -127,6 +135,7 @@ Rules:
       }
     } catch (e) {
       _isProcessing = false;
+      debugPrint('❌ AI Brain Exception: $e');
       debugPrint('AI Brain Error: $e');
       
       if (e.toString().contains('SocketException')) {

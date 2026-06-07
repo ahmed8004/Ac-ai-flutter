@@ -86,6 +86,9 @@ class AppController extends ChangeNotifier {
   bool _isWakeWordDetected(String text) {
     final lowerText = text.toLowerCase().trim();
     
+    // DEBUG: Always log what we received
+    debugPrint('🎤 Checking wake word in: "$lowerText"');
+    
     // Wake words list
     final wakeWords = [
       'ac',
@@ -102,6 +105,7 @@ class AppController extends ChangeNotifier {
     
     for (final wakeWord in wakeWords) {
       if (lowerText.startsWith(wakeWord) || lowerText == wakeWord) {
+        debugPrint('✅ Wake word detected: "$wakeWord"');
         return true;
       }
     }
@@ -110,8 +114,15 @@ class AppController extends ChangeNotifier {
     final words = lowerText.split(' ');
     if (words.length > 0 && words.length <= 5) {
       if (words.contains('ac')) {
+        debugPrint('✅ Wake word "ac" found in first 5 words');
         return true;
       }
+    }
+    
+    // DEBUG: For testing, accept any command (remove this in production)
+    if (lowerText.isNotEmpty) {
+      debugPrint('⚠️ No wake word, but processing anyway: "$lowerText"');
+      return true; // TEMP: Accept all commands
     }
     
     return false;
@@ -163,33 +174,55 @@ class AppController extends ChangeNotifier {
 
       _lastUserInput = transcript;
       _setStatus('Processing: "$transcript"');
+      debugPrint('📝 Processing transcript: "$transcript"');
       
-      // Check wake word
+      // Check wake word (now accepts all commands)
       if (!_isWakeWordDetected(transcript)) {
-        final lowerTranscript = transcript.toLowerCase().trim();
-        if (lowerTranscript == 'ac' || lowerTranscript == 'ac ai' || lowerTranscript == 'hey ac') {
-          _lastAIResponse = 'Haan bhai, bolo? Main AC hoon, tumhara assistant. Kya help chahiye?';
-          await _ttsService.speak(_lastAIResponse);
-          _setStatus('Ready');
-          _isProcessingCommand = false;
-          notifyListeners();
-          return _lastAIResponse;
-        }
-        // If no wake word detected, still process for testing
-        debugPrint('No wake word, but processing: $transcript');
+        debugPrint('⚠️ Wake word not detected, skipping...');
+        _lastAIResponse = 'Please start with "AC" or "Hey AC"';
+        await _ttsService.speak(_lastAIResponse);
+        _setStatus('Ready');
+        _isProcessingCommand = false;
+        notifyListeners();
+        return _lastAIResponse;
       }
       
-      final commandResult = await _commandProcessor.processCommand(transcript);
+      // Remove wake word from command
+      String command = transcript.toLowerCase().trim();
+      final wakeWords = ['ac ai', 'hey ac', 'ac'];
+      for (final ww in wakeWords) {
+        if (command.startsWith(ww)) {
+          command = command.substring(ww.length).trim();
+          break;
+        }
+      }
       
-      if (commandResult.success && commandResult.type != CommandType.unknown) {
-        _lastAIResponse = commandResult.message;
-        await _ttsService.speak(commandResult.message);
-        _setStatus('Ready');
-      } else {
-        final aiResponse = await _aiBrainService.processInput(transcript);
-        _lastAIResponse = aiResponse;
-        await _ttsService.speak(aiResponse);
-        _setStatus('Ready');
+      debugPrint('🎯 Command after wake word removal: "$command"');
+      
+      // Process the command
+      try {
+        final commandResult = await _commandProcessor.processCommand(command);
+        
+        if (commandResult.success && commandResult.type != CommandType.unknown) {
+          debugPrint('✅ Command executed: ${commandResult.type}');
+          _lastAIResponse = commandResult.message;
+          _setStatus('Ready');
+        } else {
+          debugPrint('🤖 Sending to AI: "$command"');
+          final aiResponse = await _aiBrainService.processInput(command);
+          _lastAIResponse = aiResponse;
+          _setStatus('Ready');
+        }
+        
+        // Speak the response
+        debugPrint('🔊 Speaking: "${_lastAIResponse.substring(0, _lastAIResponse.length > 50 ? 50 : _lastAIResponse.length)}..."');
+        await _ttsService.speak(_lastAIResponse);
+        
+      } catch (e, stackTrace) {
+        debugPrint('❌ Error processing: $e');
+        debugPrint('Stack: $stackTrace');
+        _lastAIResponse = 'Sorry, kuch galat ho gaya. Please try again.';
+        await _ttsService.speak(_lastAIResponse);
       }
 
       _isProcessingCommand = false;
