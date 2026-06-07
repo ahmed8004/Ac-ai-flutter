@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
@@ -7,61 +8,67 @@ class STTService {
   bool _isListening = false;
   String _currentLocale = 'en-US';
   String _lastResult = '';
+  String? _currentError;
 
   bool get isAvailable => _isAvailable;
   bool get isListening => _isListening;
-  String getLastResult() => _lastResult;
+  String? get lastError => _currentError;
 
   Future<bool> initialize() async {
     try {
       debugPrint('🔊 STT: Initializing...');
+      _currentError = null;
       
       _isAvailable = await _speech.initialize(
         onError: (error) {
           debugPrint('❌ STT Error: ${error.errorMsg}');
+          _currentError = error.errorMsg;
           _isListening = false;
         },
         onStatus: (status) {
           debugPrint('📊 STT Status: $status');
           if (status == 'done' || status == 'notListening') {
             _isListening = false;
+          } else if (status == 'listening') {
+            _isListening = true;
           }
         },
-        debugLogging: true,
+        debugLogging: kDebugMode,
       );
       
       debugPrint('✅ STT initialized: $_isAvailable');
       
       if (_isAvailable) {
-        // Try to get available locales
         try {
           final locales = await _speech.locales();
           debugPrint('🌍 Available locales: ${locales.length}');
           
-          // Prefer English for better accuracy
-          if (locales.any((l) => l.localeId == 'en-IN')) {
-            _currentLocale = 'en-IN';
-          } else if (locales.any((l) => l.localeId == 'en-US')) {
-            _currentLocale = 'en-US';
-          } else if (locales.any((l) => l.localeId == 'hi-IN')) {
-            _currentLocale = 'hi-IN';
+          // Check for preferred locales
+          final preferredLocales = ['en-US', 'en-IN', 'hi-IN', 'en-GB'];
+          for (final locale in preferredLocales) {
+            if (locales.any((l) => l.localeId == locale)) {
+              _currentLocale = locale;
+              debugPrint('🎯 STT using locale: $_currentLocale');
+              break;
+            }
           }
-          
-          debugPrint('🎯 STT using locale: $_currentLocale');
         } catch (e) {
           debugPrint('⚠️ Could not get locales: $e');
         }
+      } else {
+        _currentError = 'Speech recognition not available';
       }
       
       return _isAvailable;
     } catch (e) {
       debugPrint('❌ STT initialization failed: $e');
+      _currentError = e.toString();
       _isAvailable = false;
       return false;
     }
   }
 
-  Future<String?> listen() async {
+  Future<String?> listenFor(Duration duration) async {
     if (_isListening) {
       debugPrint('⚠️ Already listening');
       return null;
@@ -74,42 +81,48 @@ class STTService {
     
     _isListening = true;
     _lastResult = '';
+    _currentError = null;
+    
+    final completer = Completer<String?>();
     
     try {
-      debugPrint('🎤 Starting to listen...');
+      debugPrint('🎤 Starting to listen for ${duration.inSeconds}s...');
       
       await _speech.listen(
         onResult: (result) {
           _lastResult = result.recognizedWords;
-          debugPrint('📝 Heard: "$_lastResult"');
+          debugPrint('📝 Heard: "$_lastResult" (final: ${result.finalResult})');
+          
+          if (result.finalResult && !completer.isCompleted) {
+            completer.complete(_lastResult);
+          }
         },
-        localeId: _currentLocale,
         listenOptions: stt.SpeechListenOptions(
-          listenMode: stt.ListenMode.confirmation,
           partialResults: true,
+          listenMode: stt.ListenMode.dictation,
         ),
+        localeId: _currentLocale,
       );
       
-      // Wait for speech with timeout
-      int timeout = 0;
-      while (_isListening && timeout < 100) {
-        await Future.delayed(const Duration(milliseconds: 100));
-        timeout++;
-        
-        if (_lastResult.isNotEmpty) {
-          // Got some speech, wait a bit more for completion
-          await Future.delayed(const Duration(milliseconds: 1000));
-          break;
-        }
+      // Wait for duration or result
+      final result = await Future.any([
+        completer.future,
+        Future.delayed(duration, () => null),
+      ]);
+      
+      if (!completer.isCompleted) {
+        completer.complete(_lastResult.isNotEmpty ? _lastResult : null);
       }
       
       await stop();
       
-      debugPrint('✅ Final result: "$_lastResult"');
-      return _lastResult.isNotEmpty ? _lastResult : null;
+      final finalResult = await completer.future;
+      debugPrint('✅ Final result: "$finalResult"');
+      return finalResult;
       
     } catch (e) {
       debugPrint('❌ Listen error: $e');
+      _currentError = e.toString();
       _isListening = false;
       return null;
     }
@@ -139,6 +152,10 @@ class STTService {
     }
     
     _isListening = false;
+  }
+
+  String? getLastResult() {
+    return _lastResult.isNotEmpty ? _lastResult : null;
   }
 
   Future<List<String>> getAvailableLocales() async {

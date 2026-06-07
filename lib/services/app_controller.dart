@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'stt_service.dart';
 import 'tts_service.dart';
@@ -37,7 +38,6 @@ class AppController extends ChangeNotifier {
   String get lastUserInput => _lastUserInput;
   String get lastAIResponse => _lastAIResponse;
   String get statusMessage => _statusMessage;
-  PermissionService get permissionService => _permissionService;
 
   Future<void> initialize() async {
     if (_isInitialized) return;
@@ -46,27 +46,27 @@ class AppController extends ChangeNotifier {
       _setStatus('Requesting permissions...');
       await _permissionService.initialize();
       
-      // Request microphone permission
       final micGranted = await _permissionService.requestMicrophone();
       if (!micGranted) {
         _setStatus('Microphone permission needed!');
+        await _ttsService.speak('Microphone permission needed');
         return;
       }
 
-      _setStatus('Initializing voice services...');
+      _setStatus('Initializing voice...');
       
-      // Initialize services
       final sttOk = await _sttService.initialize();
       if (!sttOk) {
         _setStatus('Voice recognition not available');
+        await _ttsService.speak('Voice recognition not available');
         return;
       }
       
       await _ttsService.initialize();
-
+      
       _isInitialized = true;
       _permissionsGranted = true;
-      _setStatus('Ready! Tap button and speak');
+      _setStatus('Ready! Tap mic and speak');
       
       debugPrint('✅ App Controller initialized');
     } catch (e) {
@@ -82,7 +82,7 @@ class AppController extends ChangeNotifier {
     }
 
     if (!_permissionService.essentialGranted) {
-      await _ttsService.speak('Microphone permission needed');
+      await _ttsService.speak('Please grant microphone permission');
       return;
     }
 
@@ -93,12 +93,11 @@ class AppController extends ChangeNotifier {
 
       debugPrint('🎤 Starting voice input...');
       
-      // Listen for speech
-      final transcript = await _sttService.listen();
+      final transcript = await _sttService.listenFor(const Duration(seconds: 5));
       
       if (transcript == null || transcript.isEmpty) {
         _setStatus('No speech detected');
-        await _ttsService.speak('Sorry, mujhe kuch sunai nahi diya');
+        await _ttsService.speak('Sorry, I could not hear anything');
         _isProcessingCommand = false;
         notifyListeners();
         return;
@@ -108,11 +107,25 @@ class AppController extends ChangeNotifier {
       _setStatus('Processing: "$transcript"');
       debugPrint('📝 Processing: "$transcript"');
       
-      // Check for wake word
+      await _processCommand(transcript);
+
+    } catch (e) {
+      debugPrint('❌ Voice input error: $e');
+      _setStatus('Error: $e');
+      _isProcessingCommand = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _processCommand(String transcript) async {
+    try {
       final lower = transcript.toLowerCase().trim();
+      
+      // Check for wake word
       if (!lower.startsWith('ac') && 
           !lower.startsWith('hey ac') && 
-          !lower.startsWith('ac ai')) {
+          !lower.startsWith('ac ai') &&
+          !lower.startsWith('assistant')) {
         _setStatus('Say "AC" first');
         await _ttsService.speak('Please start with AC');
         _isProcessingCommand = false;
@@ -129,42 +142,43 @@ class AppController extends ChangeNotifier {
         }
       }
       
-      debugPrint('🎯 Command: "$command"');
-      
-      // Process command
-      try {
-        final result = await _commandProcessor.processCommand(command);
-        
-        if (result.success && result.type != CommandType.unknown) {
-          _lastAIResponse = result.message;
-          _setStatus('Done: ${result.type}');
-        } else {
-          _setStatus('Asking AI...');
-          _lastAIResponse = await _aiBrainService.processInput(command);
-        }
-        
-        debugPrint('💬 Response: "${_lastAIResponse.substring(0, _lastAIResponse.length > 50 ? 50 : _lastAIResponse.length)}..."');
-        
-        // Speak response
+      if (command.isEmpty) {
+        _lastAIResponse = 'Haan bhai, bolo? Kya help chahiye?';
         await _ttsService.speak(_lastAIResponse);
-        _setStatus('Ready!');
-        
-      } catch (e) {
-        debugPrint('❌ Process error: $e');
-        _lastAIResponse = 'Sorry, error ho gaya';
-        await _ttsService.speak(_lastAIResponse);
-        _setStatus('Error occurred');
+        _setStatus('Ready');
+        _isProcessingCommand = false;
+        notifyListeners();
+        return;
       }
-
-      _isProcessingCommand = false;
-      notifyListeners();
-
+      
+      debugPrint('🎯 Command: "$command"');
+      _setStatus('Processing command...');
+      
+      // Process the command
+      final result = await _commandProcessor.processCommand(command);
+      
+      if (result.success && result.type != CommandType.unknown) {
+        _lastAIResponse = result.message;
+        _setStatus('Done');
+      } else {
+        _setStatus('Asking AI...');
+        _lastAIResponse = await _aiBrainService.processInput(command);
+      }
+      
+      debugPrint('💬 Response: "${_lastAIResponse.substring(0, _lastAIResponse.length > 50 ? 50 : _lastAIResponse.length)}..."');
+      
+      await _ttsService.speak(_lastAIResponse);
+      _setStatus('Ready');
+      
     } catch (e) {
-      debugPrint('❌ Voice input error: $e');
-      _isProcessingCommand = false;
-      _setStatus('Error: $e');
-      notifyListeners();
+      debugPrint('❌ Process error: $e');
+      _lastAIResponse = 'Sorry, error ho gaya';
+      await _ttsService.speak(_lastAIResponse);
+      _setStatus('Error');
     }
+    
+    _isProcessingCommand = false;
+    notifyListeners();
   }
 
   Future<void> processTextInput(String input) async {
@@ -173,27 +187,8 @@ class AppController extends ChangeNotifier {
       return;
     }
 
-    try {
-      _setStatus('Processing...');
-      _lastUserInput = input;
-
-      final result = await _commandProcessor.processCommand(input);
-      
-      if (result.success && result.type != CommandType.unknown) {
-        _lastAIResponse = result.message;
-        await _ttsService.speak(result.message);
-      } else {
-        final aiResponse = await _aiBrainService.processInput(input);
-        _lastAIResponse = aiResponse;
-        await _ttsService.speak(aiResponse);
-      }
-
-      _setStatus('Ready!');
-      notifyListeners();
-    } catch (e) {
-      _setStatus('Error: $e');
-      debugPrint('Text input error: $e');
-    }
+    _lastUserInput = input;
+    await _processCommand(input);
   }
 
   void _setStatus(String message) {
@@ -220,13 +215,6 @@ class AppController extends ChangeNotifier {
     await _sttService.stop();
     _setStatus('Stopped');
     notifyListeners();
-  }
-
-  Future<Map<String, bool>> requestAllPermissions() async {
-    final results = await _permissionService.requestAll();
-    _permissionsGranted = _permissionService.essentialGranted;
-    notifyListeners();
-    return results;
   }
 
   @override
