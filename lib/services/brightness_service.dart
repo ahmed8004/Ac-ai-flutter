@@ -1,15 +1,16 @@
 import 'package:flutter/foundation.dart';
-import 'package:screen_brightness/screen_brightness.dart';
+import 'package:flutter/services.dart';
 
 class BrightnessService {
-  final ScreenBrightness _brightness = ScreenBrightness();
+  static const MethodChannel _channel = MethodChannel('ac.ai/brightness');
   double _currentBrightness = 0.5;
 
   double get currentBrightness => _currentBrightness;
 
   Future<void> initialize() async {
     try {
-      _currentBrightness = await _brightness.current;
+      final brightness = await _channel.invokeMethod('getBrightness');
+      _currentBrightness = (brightness ?? 50) / 100.0;
       debugPrint('Brightness initialized: $_currentBrightness');
     } catch (e) {
       debugPrint('Brightness init error: $e');
@@ -19,7 +20,7 @@ class BrightnessService {
   Future<void> setBrightness(double value) async {
     try {
       final brightness = value.clamp(0.0, 1.0);
-      await _brightness.setScreenBrightness(brightness);
+      await _channel.invokeMethod('setBrightness', {'level': (brightness * 100).toInt()});
       _currentBrightness = brightness;
       debugPrint('Brightness set to: $brightness');
     } catch (e) {
@@ -41,7 +42,7 @@ class BrightnessService {
 
   Future<void> auto() async {
     try {
-      await _brightness.resetScreenBrightness();
+      await _channel.invokeMethod('autoBrightness');
       debugPrint('Auto brightness enabled');
     } catch (e) {
       debugPrint('Auto brightness error: $e');

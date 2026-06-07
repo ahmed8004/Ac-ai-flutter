@@ -72,9 +72,6 @@ dependencies:
   # Screenshot
   screenshot: ^2.1.0
   
-  # Screen Brightness
-  screen_brightness: ^0.9.0
-  
   # Camera
   camera: ^0.10.5+9
   
