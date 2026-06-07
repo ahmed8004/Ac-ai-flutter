@@ -5,6 +5,11 @@ import 'tts_service.dart';
 import 'ai_brain_service.dart';
 import 'command_processor.dart';
 import 'permission_service.dart';
+import 'document_service.dart';
+import 'ai_document_service.dart';
+
+// Export for external use
+export 'command_processor.dart' show CommandType;
 
 class AppController extends ChangeNotifier {
   final STTService _sttService;

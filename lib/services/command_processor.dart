@@ -14,6 +14,8 @@ import 'file_manager_service.dart';
 import 'download_service.dart';
 import 'pdf_service.dart';
 import 'app_launcher_service.dart';
+import 'document_service.dart';
+import 'ai_document_service.dart';
 
 enum CommandType {
   call,
@@ -37,6 +39,8 @@ enum CommandType {
   download,
   pdf,
   reminder,
+  document,       // NEW: Read/explain document
+  summarize,      // NEW: AI summarize
   unknown,
 }
 
@@ -70,6 +74,8 @@ class CommandProcessor {
   final DownloadService _downloadService;
   final PDFService _pdfService;
   final AppLauncherService _appLauncherService;
+  final DocumentService _documentService;
+  final AIDocumentService _aiDocumentService;
 
   CommandProcessor({
     CallService? callService,
@@ -87,6 +93,8 @@ class CommandProcessor {
     DownloadService? downloadService,
     PDFService? pdfService,
     AppLauncherService? appLauncherService,
+    DocumentService? documentService,
+    AIDocumentService? aiDocumentService,
   })  : _callService = callService ?? CallService(),
         _smsService = smsService ?? SMSService(),
         _youtubeService = youtubeService ?? YouTubeService(),
@@ -101,7 +109,9 @@ class CommandProcessor {
         _fileManagerService = fileManagerService ?? FileManagerService(),
         _downloadService = downloadService ?? DownloadService(),
         _pdfService = pdfService ?? PDFService(),
-        _appLauncherService = appLauncherService ?? AppLauncherService();
+        _appLauncherService = appLauncherService ?? AppLauncherService(),
+        _documentService = documentService ?? DocumentService(),
+        _aiDocumentService = aiDocumentService ?? AIDocumentService();
 
   Future<CommandResult> processCommand(String input) async {
     final lowerInput = input.toLowerCase();
@@ -176,6 +186,15 @@ class CommandProcessor {
 
     if (_matchesCommand(lowerInput, ['location', 'kahan', 'कहां'])) {
       return _processLocationCommand();
+    }
+
+    // DOCUMENT & AI COMMANDS
+    if (_matchesCommand(lowerInput, ['document', 'doc', 'read doc', 'document padho', 'pdf read', 'file read'])) {
+      return await _processDocumentCommand(input);
+    }
+
+    if (_matchesCommand(lowerInput, ['summarize', 'summary', 'samiksha', 'saransh', 'explain doc', 'document explain'])) {
+      return await _processSummarizeCommand(input);
     }
 
     return CommandResult(
@@ -703,11 +722,93 @@ class CommandProcessor {
     _wifiService.dispose();
     _brightnessService.dispose();
     _screenshotService.dispose();
+  // DOCUMENT COMMANDS
+  Future<CommandResult> _processDocumentCommand(String input) async {
+    final lower = input.toLowerCase();
+    
+    // Check for summary type
+    String summaryType = 'short';
+    if (lower.contains('detail') || lower.contains('detailed')) {
+      summaryType = 'detailed';
+    } else if (lower.contains('bullet') || lower.contains('points')) {
+      summaryType = 'bullets';
+    } else if (lower.contains('explain') || lower.contains('samjhao')) {
+      summaryType = 'explain';
+    }
+    
+    _setStatus('Opening document picker...');
+    final result = await _documentService.pickDocument();
+    
+    if (result == null) {
+      return CommandResult(
+        success: false,
+        message: 'No document selected',
+        type: CommandType.document,
+      );
+    }
+    
+    if (result.startsWith('Error')) {
+      return CommandResult(
+        success: false,
+        message: result,
+        type: CommandType.document,
+      );
+    }
+    
+    _setStatus('Reading document...');
+    final text = _documentService.extractedText;
+    
+    if (text.isEmpty) {
+      return CommandResult(
+        success: false,
+        message: 'Could not read document',
+        type: CommandType.document,
+      );
+    }
+    
+    _setStatus('AI summarizing...');
+    final summary = await _aiDocumentService.summarize(text, summaryType);
+    
+    return CommandResult(
+      success: true,
+      message: summary,
+      type: CommandType.document,
+      data: {
+        'fileName': _documentService.lastFileName,
+        'filePath': result,
+        'textLength': text.length,
+        'summaryType': summaryType,
+      },
+    );
+  }
+
+  Future<CommandResult> _processSummarizeCommand(String input) async {
+    // Reuse document command with specific summary intent
+    return await _processDocumentCommand(input);
+  }
+
+  void _setStatus(String message) {
+    debugPrint('📋 $message');
+  }
+
+  void dispose() {
+    _callService.dispose();
+    _smsService.dispose();
+    _youtubeService.dispose();
+    _volumeService.dispose();
+    _cameraService.dispose();
+    _torchService.dispose();
+    _bluetoothService.dispose();
+    _wifiService.dispose();
+    _brightnessService.dispose();
+    _screenshotService.dispose();
     _webScraperService.dispose();
     _fileManagerService.dispose();
     _downloadService.dispose();
     _pdfService.dispose();
     _appLauncherService.dispose();
+    _documentService.dispose();
+    _aiDocumentService.dispose();
     debugPrint('Command Processor disposed');
   }
 }

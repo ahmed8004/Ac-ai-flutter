@@ -5,6 +5,13 @@ class AppTheme {
   // Primary Colors
   static const Color primaryCyan = Color(0xFF00D4FF);
   static const Color primaryDark = Color(0xFF0099CC);
+  
+  // Orb State Colors (Material Design)
+  static const Color idleColor = Color(0xFFE0E0E0);           // Grey
+  static const Color listeningColor = Color(0xFF2196F3);      // Blue
+  static const Color processingColor = Color(0xFFFF9800);       // Orange
+  static const Color speakingColor = Color(0xFF4CAF50);       // Green
+  static const Color errorColor = Color(0xFFF44336);          // Red
 
   // Background Colors
   static const Color bgPrimary = Color(0xFF0D0D0D);
