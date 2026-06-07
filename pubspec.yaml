@@ -13,76 +13,76 @@ dependencies:
     sdk: flutter
   
   # State Management
-  provider: ^6.1.5+1
+  provider: ^6.1.0
   
   # UI Animation
-  flutter_animate: ^4.5.2
-  cupertino_icons: ^1.0.9
+  flutter_animate: ^4.3.0
+  cupertino_icons: ^1.0.6
   
   # Speech-to-Text
-  speech_to_text: ^7.4.0
+  speech_to_text: ^6.6.0
   
   # Text-to-Speech
-  flutter_tts: ^4.2.5
+  flutter_tts: ^3.8.5
   
   # HTTP & API
-  http: ^0.13.6
+  http: ^1.1.0
   
   # Permissions
-  permission_handler: ^12.0.3
+  permission_handler: ^11.0.0
   
   # Storage
-  shared_preferences: ^2.5.5
-  path_provider: ^2.1.5
+  shared_preferences: ^2.2.2
+  path_provider: ^2.1.2
   
   # Background Service
-  flutter_background_service: ^5.1.0
-  awesome_notifications: ^0.11.0
+  flutter_background_service: ^5.0.5
+  awesome_notifications: ^0.9.0
   
   # Location
-  geolocator: ^14.0.2
+  geolocator: ^11.0.0
   
-  # Contacts (Updated package)
-  fast_contacts: ^5.0.1
+  # Contacts
+  fast_contacts: ^3.0.0
   
   # URL Launcher
-  url_launcher: ^6.3.2
+  url_launcher: ^6.2.2
   
   # Image Picker
-  image_picker: ^1.2.2
+  image_picker: ^1.0.7
   
   # Torch/Flashlight
   torch_light: ^1.0.0
   
   # Connectivity
-  connectivity_plus: ^7.1.1
+  connectivity_plus: ^5.0.2
   
   # File Management
-  file_picker: ^11.0.2
-  open_file: ^3.5.11
+  file_picker: ^6.1.1
+  open_file: ^3.3.1
   
   # Web Scraping & Search
   web_scraper: ^0.1.4
-  html: ^0.15.6
+  html: ^0.15.4
   
   # PDF Generation
-  pdf: ^3.11.0
-  printing: ^5.14.3
+  pdf: ^3.10.8
+  printing: ^5.12.0
   
   # Screenshot
-  screenshot: ^3.0.0
+  screenshot: ^2.1.0
   
   # Screen Brightness
-  screen_brightness: ^2.1.9
+  screen_brightness: ^1.0.1
   
   # Volume Control
-  flutter_volume_controller: ^2.0.1
+  flutter_volume_controller: ^1.0.7
   
   # Media Player Control
-  audio_session: ^0.1.21
+  audio_session: ^0.1.18
   
   # Camera
-  camera: ^0.11.0+2
+  camera: ^0.10.5+9
   
   # File Download
   flutter_downloader: ^1.11.1
@@ -90,8 +90,8 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_launcher_icons: ^0.14.4
-  flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.13.1
+  flutter_lints: ^3.0.0
 
 flutter:
   uses-material-design: true
