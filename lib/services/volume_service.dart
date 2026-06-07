@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_volume_controller/flutter_volume_controller.dart';
+import 'package:volume_controller/volume_controller.dart';
 
 class VolumeService {
   static const MethodChannel _channel = MethodChannel('ac.ai/volume');
@@ -9,7 +9,7 @@ class VolumeService {
   Future<void> init() async {
     if (_initialized) return;
     try {
-      await FlutterVolumeController.setVolume(0.5);
+      await VolumeController.setVolume(0.5);
       _initialized = true;
       debugPrint('Volume Service initialized');
     } catch (e) {
@@ -19,11 +19,10 @@ class VolumeService {
   
   Future<void> setVolume(int level) async {
     try {
-      await FlutterVolumeController.setVolume(level.toDouble() / 100.0);
+      await VolumeController.setVolume(level.toDouble() / 100.0);
       debugPrint('Volume set to $level');
     } catch (e) {
       debugPrint('Volume control error: $e');
-      // Fallback to method channel
       try {
         await _channel.invokeMethod('setVolume', {'level': level});
       } on PlatformException catch (pe) {
@@ -34,11 +33,10 @@ class VolumeService {
 
   Future<int> getVolume() async {
     try {
-      final volume = await FlutterVolumeController.getVolume();
+      final volume = await VolumeController.getVolume();
       return ((volume ?? 0.5) * 100).toInt();
     } catch (e) {
       debugPrint('Get volume error: $e');
-      // Fallback to method channel
       try {
         final int? vol = await _channel.invokeMethod('getVolume');
         return vol ?? 50;
