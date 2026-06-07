@@ -79,7 +79,7 @@ dependencies:
   flutter_volume_controller: ^2.0.1
   
   # Media Player Control
-  audio_session: ^0.2.3
+  audio_session: ^0.1.21
   
   # Camera
   camera: ^0.11.0+2
