@@ -162,12 +162,12 @@ class OrbController extends ChangeNotifier {
     setState(OrbState.listening);
 
     try {
-      final response = await _appController.processVoiceInput();
-      _lastResponse = response;
+      await _appController.processVoiceInput();
+      _lastResponse = _appController.lastAIResponse;
 
       if (!_isPaused && !_isStopped) {
         setState(OrbState.speaking);
-        await Future.delayed(Duration(milliseconds: response.length * 30));
+        await Future.delayed(Duration(milliseconds: _lastResponse.length * 30));
         setState(OrbState.idle);
       }
     } catch (e) {

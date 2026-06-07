@@ -84,8 +84,10 @@ class STTService {
           debugPrint('📝 Heard: "$_lastResult"');
         },
         localeId: _currentLocale,
-        listenMode: stt.ListenMode.confirmation,
-        partialResults: true,
+        listenOptions: stt.SpeechListenOptions(
+          listenMode: stt.ListenMode.confirmation,
+          partialResults: true,
+        ),
       );
       
       // Wait for speech with timeout
