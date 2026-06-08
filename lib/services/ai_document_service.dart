@@ -49,19 +49,19 @@ class AIDocumentService {
       String systemPrompt;
       switch (summaryType) {
         case 'short':
-          systemPrompt = '''Summarize this document in 2-3 sentences maximum. Be concise and capture the main points only. Respond in Hindi if the document is in Hindi, otherwise in English.'''
+          systemPrompt = '''Summarize this document in 2-3 sentences maximum. Be concise and capture the main points only. Respond in Hindi if the document is in Hindi, otherwise in English.''';
           break;
         case 'detailed':
-          systemPrompt = '''Provide a detailed summary of this document. Include main points, key arguments, and important details. Use paragraphs. Respond in the same language as the document.'''
+          systemPrompt = '''Provide a detailed summary of this document. Include main points, key arguments, and important details. Use paragraphs. Respond in the same language as the document.''';
           break;
         case 'bullets':
-          systemPrompt = '''Summarize this document as bullet points. List the main points with bullet markers (•). Include 5-10 key points. Respond in the same language as the document.'''
+          systemPrompt = '''Summarize this document as bullet points. List the main points with bullet markers (•). Include 5-10 key points. Respond in the same language as the document.''';
           break;
         case 'explain':
-          systemPrompt = '''Explain this document in simple terms as if explaining to a beginner. Break down complex concepts. Respond in the same language as the document.'''
+          systemPrompt = '''Explain this document in simple terms as if explaining to a beginner. Break down complex concepts. Respond in the same language as the document.''';
           break;
         default:
-          systemPrompt = '''Summarize this document. Provide key points and main ideas. Respond in the same language as the document.'''
+          systemPrompt = '''Summarize this document. Provide key points and main ideas. Respond in the same language as the document.''';
       }
 
       // Limit text length for API

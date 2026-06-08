@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:pdf/pdf.dart';
@@ -7,7 +6,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class DocumentService {
-  PDFDoc? _currentPdf;
   String _lastFilePath = '';
   String _lastFileName = '';
   String _extractedText = '';
