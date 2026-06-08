@@ -194,7 +194,6 @@ class DocumentService {
   }
 
   void clear() {
-    _currentPdf = null;
     _lastFilePath = '';
     _lastFileName = '';
     _extractedText = '';

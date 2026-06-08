@@ -44,7 +44,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             backgroundColor: AppTheme.bgPrimary,
             body: Stack(
               children: [
-                const BackgroundEffect(),
+                BackgroundEffect(
+                  state: _getOrbState(controller),
+                  color: _getStatusColor(controller.statusMessage),
+                ),
                 
                 SafeArea(
                   child: Column(

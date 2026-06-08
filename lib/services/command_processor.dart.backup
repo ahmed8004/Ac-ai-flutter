@@ -711,6 +711,17 @@ class CommandProcessor {
     );
   }
 
+  void dispose() {
+    _callService.dispose();
+    _smsService.dispose();
+    _youtubeService.dispose();
+    _volumeService.dispose();
+    _cameraService.dispose();
+    _torchService.dispose();
+    _bluetoothService.dispose();
+    _wifiService.dispose();
+    _brightnessService.dispose();
+    _screenshotService.dispose();
   // DOCUMENT COMMANDS
   Future<CommandResult> _processDocumentCommand(String input) async {
     final lower = input.toLowerCase();
@@ -725,6 +736,7 @@ class CommandProcessor {
       summaryType = 'explain';
     }
     
+    _setStatus('Opening document picker...');
     final result = await _documentService.pickDocument();
     
     if (result == null) {
@@ -743,6 +755,7 @@ class CommandProcessor {
       );
     }
     
+    _setStatus('Reading document...');
     final text = _documentService.extractedText;
     
     if (text.isEmpty) {
@@ -753,6 +766,7 @@ class CommandProcessor {
       );
     }
     
+    _setStatus('AI summarizing...');
     final summary = await _aiDocumentService.summarize(text, summaryType);
     
     return CommandResult(
@@ -771,6 +785,10 @@ class CommandProcessor {
   Future<CommandResult> _processSummarizeCommand(String input) async {
     // Reuse document command with specific summary intent
     return await _processDocumentCommand(input);
+  }
+
+  void _setStatus(String message) {
+    debugPrint('📋 $message');
   }
 
   void dispose() {
