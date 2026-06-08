@@ -105,7 +105,7 @@ class STTService {
       );
       
       // Wait for duration or result
-      final result = await Future.any([
+      await Future.any([
         completer.future,
         Future.delayed(duration, () => null),
       ]);

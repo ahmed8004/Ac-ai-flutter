@@ -83,46 +83,26 @@ class DocumentService {
       final file = File(path);
       final bytes = await file.readAsBytes();
       
-      // Parse PDF and extract text
-      final pdfDoc = PdfDocument.openData(bytes);
-      final StringBuffer textBuffer = StringBuffer();
+      // Simple text extraction from PDF binary
+      // Note: pdf package doesn't have built-in text extraction
+      // Using basic ASCII extraction as fallback
+      final textContent = String.fromCharCodes(bytes.where((b) => 
+        (b >= 32 && b <= 126) || 
+        b == 9 || b == 10 || b == 13
+      ).toList());
       
-      for (var i = 0; i < pdfDoc.pagesCount; i++) {
-        final page = pdfDoc.getPage(i);
-        // Note: pdf package basic text extraction
-        // Full extraction requires pdf_text package
-        textBuffer.writeln('Page ${i + 1}');
-        textBuffer.writeln('---');
-      }
-      
-      pdfDoc.close();
-      
-      // For now, indicate that PDF was loaded
-      // Full text extraction will be done via platform channel or alternative
-      _extractedText = textBuffer.toString();
-      
-      // Fallback: Try reading as text if it's a simple PDF
-      try {
-        final textContent = String.fromCharCodes(bytes.where((b) => 
-          (b >= 32 && b <= 126) || 
-          b == 9 || b == 10 || b == 13
-        ).toList());
+      if (textContent.length > 100) {
+        // Clean up extracted text
+        final cleanText = textContent
+            .replaceAll(RegExp(r'[^\x20-\x7E\n\r\t]'), '')
+            .replaceAll(RegExp(r'\s+'), ' ')
+            .trim();
         
-        if (textContent.length > 100) {
-          // Clean up extracted text
-          final cleanText = textContent
-              .replaceAll(RegExp(r'[^\x20-\x7E\n\r\t]'), '')
-              .replaceAll(RegExp(r'\s+'), ' ')
-              .trim();
-          
-          if (cleanText.length > 50) {
-            _extractedText = cleanText.length > 8000 
-                ? cleanText.substring(0, 8000) + '...' 
-                : cleanText;
-          }
+        if (cleanText.length > 50) {
+          _extractedText = cleanText.length > 8000 
+              ? cleanText.substring(0, 8000) + '...' 
+              : cleanText;
         }
-      } catch (e) {
-        debugPrint('⚠️ Text extraction fallback failed: $e');
       }
       
       if (_extractedText.isEmpty || _extractedText.length < 50) {
