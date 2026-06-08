@@ -3,67 +3,58 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/orb_state.dart';
 import '../theme/app_theme.dart';
+import '../services/app_controller.dart';
+import 'settings_panel.dart';
+
+import '../services/app_controller.dart';
 
 class ControlButtons extends StatelessWidget {
   const ControlButtons({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<OrbController>(
+    return Consumer<AppController>(
       builder: (context, controller, child) {
-        return Stack(
-          children: [
-            Positioned(
-              left: 24,
-              bottom: 40,
-              child: _ControlButton(
-                icon: Icons.pause,
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _ControlButton(
+                icon: Icons.settings,
                 color: AppTheme.buttonPause,
-                onPressed: () => _handlePause(context, controller),
-                isActive: !controller.isPaused && !controller.isStopped,
+                onPressed: () => _showSettings(context),
+                isActive: true,
               ),
-            ),
-            Positioned(
-              right: 24,
-              bottom: 40,
-              child: _ControlButton(
+              _ControlButton(
                 icon: Icons.stop,
                 color: AppTheme.buttonStop,
                 onPressed: () => _handleStop(context, controller),
-                isActive: !controller.isStopped,
+                isActive: true,
               ),
-            ),
-          ],
+            ],
+          ),
         );
       },
     );
   }
 
-  void _handlePause(BuildContext context, OrbController controller) {
-    HapticFeedback.mediumImpact();
-    
-    if (controller.isPaused) {
-      controller.resume();
-      _showSnackBar(context, 'System resumed', AppTheme.buttonPause);
-    } else {
-      controller.pause();
-      _showSnackBar(context, 'System paused', AppTheme.buttonPause);
-    }
+  void _showSettings(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.bgSecondary,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => const SettingsPanel(),
+    );
   }
 
-  void _handleStop(BuildContext context, OrbController controller) {
+  void _handleStop(BuildContext context, AppController controller) {
     HapticFeedback.heavyImpact();
-    
-    showDialog(
-      context: context,
-      builder: (context) => _StopConfirmationDialog(
-        onConfirm: () {
-          controller.stop();
-          Navigator.pop(context);
-          _showSnackBar(context, 'System stopped', AppTheme.buttonStop);
-        },
-      ),
-    );
+    controller.stopSpeaking();
+    controller.stopListening();
+    _showSnackBar(context, 'System stopped', AppTheme.buttonStop);
   }
 
   void _showSnackBar(BuildContext context, String message, Color color) {
