@@ -72,8 +72,8 @@ dependencies:
   # Screenshot
   screenshot: ^2.1.0
   
-  # Google Fonts (Material Design)
-  google_fonts: ^4.0.4
+  # Google Fonts - Locked to working version
+  google_fonts: 4.0.4
   
   # Camera
   camera: ^0.10.5+9
